@@ -262,6 +262,14 @@ void CGameWorld::Tick()
 			for(; pEnt;)
 			{
 				m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
+				pEnt->PreTick();
+				pEnt = m_pNextTraverseEntity;
+			}
+
+		for(auto *pEnt : m_apFirstEntityTypes)
+			for(; pEnt;)
+			{
+				m_pNextTraverseEntity = pEnt->m_pNextTypeEntity;
 				pEnt->Tick();
 				pEnt = m_pNextTraverseEntity;
 			}

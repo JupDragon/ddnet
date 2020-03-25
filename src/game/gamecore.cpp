@@ -365,6 +365,11 @@ void CCharacterCore::Tick(bool UseInput)
 			m_HookPos = m_Pos;
 		}
 	}
+}
+
+void CCharacterCore::TickDefered()
+{
+	float PhysSize = 28.f;
 
 	if(m_pWorld)
 	{

@@ -764,7 +764,7 @@ void CCharacter::ResetInput()
 	m_LatestPrevInput = m_LatestInput = m_Input;
 }
 
-void CCharacter::Tick()
+void CCharacter::PreTick()
 {
 	/*if(m_pPlayer->m_ForceBalanced)
 	{
@@ -791,6 +791,14 @@ void CCharacter::Tick()
 
 	m_Core.m_Input = m_Input;
 	m_Core.Tick(true);
+}
+
+void CCharacter::Tick()
+{
+	if(m_Paused)
+		return;
+
+	m_Core.TickDefered();
 
 	if(!m_PrevInput.m_Hook && m_Input.m_Hook && !(m_Core.m_TriggeredEvents & COREEVENT_HOOK_ATTACH_PLAYER))
 	{
@@ -825,6 +833,7 @@ void CCharacter::TickDefered()
 		m_ReckoningCore.Init(&TempWorld, GameServer()->Collision(), &Teams()->m_Core, m_pTeleOuts);
 		m_ReckoningCore.m_Id = m_pPlayer->GetCID();
 		m_ReckoningCore.Tick(false);
+		m_ReckoningCore.TickDefered();
 		m_ReckoningCore.Move();
 		m_ReckoningCore.Quantize();
 	}

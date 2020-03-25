@@ -36,6 +36,7 @@ public:
 
 	virtual void Reset();
 	virtual void Destroy();
+	virtual void PreTick();
 	virtual void Tick();
 	virtual void TickDefered();
 	virtual void TickPaused();

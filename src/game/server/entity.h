@@ -88,6 +88,13 @@ public:
 	virtual void Reset() {}
 
 	/*
+		Function: PreTick
+			Called to progress the entity before the next tick. Can prepare velocity that requires
+			synchronization with later velocity, that is used to move the entity.
+	*/
+	virtual void PreTick() {}
+
+	/*
 		Function: Tick
 			Called to progress the entity to the next tick. Updates
 			and moves the entity to its new state and position.
