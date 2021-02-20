@@ -2394,6 +2394,7 @@ set(CPACK_SOURCE_FILES
   datasrc/
   ddnet-libs/
   license.txt
+  license_quake.txt
   other/
   scripts/
   src/
