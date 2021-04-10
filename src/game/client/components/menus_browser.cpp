@@ -1062,7 +1062,7 @@ void CMenus::RenderServerbrowserServerDetail(CUIRect View)
 	{
 		static int s_VoteList = 0;
 		static float s_ScrollValue = 0;
-		UiDoListboxStart(&s_VoteList, &ServerScoreBoard, 26.0f, Localize("Scoreboard"), "", pSelectedServer->m_NumReceivedClients, 1, -1, s_ScrollValue);
+		UiDoListboxStart(&s_VoteList, &ServerScoreBoard, 26.0f, Localize("Scoreboard"), "", pSelectedServer->m_NumReceivedClients, 1, -1, s_ScrollValue, false, 0);
 
 		for(int i = 0; i < pSelectedServer->m_NumReceivedClients; i++)
 		{
@@ -1072,7 +1072,7 @@ void CMenus::RenderServerbrowserServerDetail(CUIRect View)
 				continue;
 
 			CUIRect Name, Clan, Score, Flag;
-			Item.m_Rect.HSplitTop(25.0f, &Name, &Item.m_Rect);
+			Name = Item.m_Rect;
 			if(UiLogicGetCurrentClickedItem() == i)
 			{
 				if(pSelectedServer->m_aClients[i].m_FriendState == IFriends::FRIEND_PLAYER)

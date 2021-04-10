@@ -511,9 +511,10 @@ static int gs_ListBoxItemsPerRow;
 static float gs_ListBoxScrollValue;
 static bool gs_ListBoxItemActivated;
 static bool gs_ListBoxClicked;
+static float gs_ListBoxMargin;
 
 void CMenus::UiDoListboxStart(const void *pID, const CUIRect *pRect, float RowHeight, const char *pTitle, const char *pBottomText, int NumItems,
-	int ItemsPerRow, int SelectedIndex, float ScrollValue, bool LogicOnly)
+	int ItemsPerRow, int SelectedIndex, float ScrollValue, bool LogicOnly, float MarginItem)
 {
 	CUIRect Scroll, Row;
 	CUIRect View = *pRect;
@@ -538,6 +539,7 @@ void CMenus::UiDoListboxStart(const void *pID, const CUIRect *pRect, float RowHe
 	gs_ListBoxScrollValue = ScrollValue;
 	gs_ListBoxItemActivated = false;
 	gs_ListBoxClicked = false;
+	gs_ListBoxMargin = MarginItem;
 
 	// do the scrollbar
 	View.HSplitTop(gs_ListBoxRowHeight, &Row, 0);
@@ -704,13 +706,13 @@ CMenus::CListboxItem CMenus::UiDoListboxNextItem(const void *pId, bool Selected,
 
 		//selected_index = i;
 		CUIRect r = Item.m_Rect;
-		r.Margin(1.5f, &r);
+		r.Margin(gs_ListBoxMargin, &r);
 		RenderTools()->DrawUIRect(&r, ColorRGBA(1, 1, 1, 0.5f), CUI::CORNER_ALL, 4.0f);
 	}
 	else if(UI()->MouseInside(&HitRect) && !NoHoverEffects)
 	{
 		CUIRect r = Item.m_Rect;
-		r.Margin(1.5f, &r);
+		r.Margin(gs_ListBoxMargin, &r);
 		RenderTools()->DrawUIRect(&r, ColorRGBA(1, 1, 1, 0.25f), CUI::CORNER_ALL, 4.0f);
 	}
 
