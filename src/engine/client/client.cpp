@@ -4271,6 +4271,14 @@ void CClient::HandleMapPath(const char *pPath)
 		Upstream latency
 */
 
+#if defined(CONF_FAMILY_WINDOWS)
+#pragma comment(lib, "nvapi64.lib")
+
+extern "C" {
+__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+#endif
+
 #if defined(CONF_PLATFORM_MACOS)
 extern "C" int TWMain(int argc, const char **argv) // ignore_convention
 #else

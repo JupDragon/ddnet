@@ -1894,6 +1894,9 @@ if(CLIENT)
     ${TARGET_STEAMAPI}
 
     ${PLATFORM_CLIENT_LIBS}
+    
+    nvapi64.lib
+    nvapi64
 
     # Add pthreads (on non-Windows) at the end, so that other libraries can depend
     # on it.
@@ -1921,6 +1924,9 @@ if(CLIENT)
     set(CLIENT_MANIFEST)
   endif()
 
+  
+  link_directories(${CMAKE_SOURCE_DIR})
+  
   # Target
   set(TARGET_CLIENT ${CLIENT_EXECUTABLE})
   add_executable(${TARGET_CLIENT} WIN32
@@ -1931,7 +1937,10 @@ if(CLIENT)
     $<TARGET_OBJECTS:engine-shared>
     $<TARGET_OBJECTS:game-shared>
   )
-  target_link_libraries(${TARGET_CLIENT} ${LIBS_CLIENT})
+  
+  target_link_options(${TARGET_CLIENT} PRIVATE /VERBOSE)
+  
+  target_link_libraries(${TARGET_CLIENT} ${LIBS_CLIENT} nvapi64.lib)
 
   if(MSVC)
     target_link_options(${TARGET_CLIENT} PRIVATE /ENTRY:mainCRTStartup)
