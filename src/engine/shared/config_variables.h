@@ -43,6 +43,8 @@ MACRO_CONFIG_STR(ClAssetGame, cl_asset_game, 50, "default", CFGFLAG_SAVE | CFGFL
 MACRO_CONFIG_STR(ClAssetEmoticons, cl_asset_emoticons, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "The asset for emoticons")
 MACRO_CONFIG_STR(ClAssetParticles, cl_asset_particles, 50, "default", CFGFLAG_SAVE | CFGFLAG_CLIENT, "The asset for particles")
 
+MACRO_CONFIG_INT(ClTickMod, cl_tick_mod, 0, -10000, 10000, CFGFLAG_CLIENT|CFGFLAG_SAVE, "-1 = +20ms ping")
+
 MACRO_CONFIG_STR(BrFilterString, br_filter_string, 25, "Novice", CFGFLAG_SAVE | CFGFLAG_CLIENT, "Server browser filtering string")
 MACRO_CONFIG_STR(BrExcludeString, br_exclude_string, 25, "", CFGFLAG_SAVE | CFGFLAG_CLIENT, "Server browser exclusion string")
 MACRO_CONFIG_INT(BrFilterFull, br_filter_full, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Filter out full server in browser")
@@ -108,6 +110,7 @@ MACRO_CONFIG_INT(GfxFullscreen, gfx_fullscreen, 0, 0, 2, CFGFLAG_SAVE | CFGFLAG_
 MACRO_CONFIG_INT(GfxHighdpi, gfx_highdpi, 1, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Enable high-dpi")
 MACRO_CONFIG_INT(GfxAlphabits, gfx_alphabits, 0, 0, 0, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Alpha bits for framebuffer (fullscreen only)")
 MACRO_CONFIG_INT(GfxColorDepth, gfx_color_depth, 24, 16, 24, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Colors bits for framebuffer (fullscreen only)")
+
 //MACRO_CONFIG_INT(GfxClear, gfx_clear, 1, 0, 1, CFGFLAG_SAVE|CFGFLAG_CLIENT, "Clear screen before rendering")
 MACRO_CONFIG_INT(GfxVsync, gfx_vsync, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Vertical sync (may cause delay)")
 MACRO_CONFIG_INT(GfxResizable, gfx_resizable, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Enables window resizing")

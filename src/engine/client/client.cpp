@@ -2092,7 +2092,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket)
 					}
 
 					// ack snapshot
-					m_AckGameTick[g_Config.m_ClDummy] = GameTick;
+					m_AckGameTick[g_Config.m_ClDummy] = GameTick + g_Config.m_ClTickMod;
 				}
 			}
 		}
@@ -2348,7 +2348,7 @@ void CClient::ProcessServerPacketDummy(CNetChunk *pPacket)
 					}
 
 					// ack snapshot
-					m_AckGameTick[!g_Config.m_ClDummy] = GameTick;
+					m_AckGameTick[!g_Config.m_ClDummy] = GameTick + g_Config.m_ClTickMod;
 				}
 			}
 		}
