@@ -1,5 +1,6 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
+#include "base/color.h"
 #include <base/math.h>
 #include <base/system.h>
 #include <engine/graphics.h>
@@ -849,12 +850,61 @@ public:
 	virtual ColorRGBA GetTextColor() { return m_Color; }
 	virtual ColorRGBA GetTextOutlineColor() { return m_OutlineColor; }
 
+	bool GetCharColorRGBA(int CharNext, ColorRGBA &NextColor)
+	{
+		switch(CharNext)
+		{
+		case 'r':
+			NextColor = ColorRGBA{0.9f, 0.1f, 0.1f, 1.0f};
+			break;
+		case 'b':
+			NextColor = ColorRGBA{0.45f, 0.45f, 1.0f, 1.0f};
+			break;
+		case 'y':
+			NextColor = ColorRGBA{0.95f, 0.9f, 0.25f, 1.0f};
+			break;
+		case 'p':
+			NextColor = ColorRGBA{0.35, 0, 1, 1};
+			break;
+		case 'k':
+			NextColor = ColorRGBA{1.0f, 0.5f, 0.9f, 1.0f};
+			break;
+		case 'g':
+			NextColor = ColorRGBA{0.55f, 0.95f, 0.4f, 1.0f};
+			break;
+		case 'h':
+			NextColor = ColorRGBA{1.0f, 0.6f, 0.05f, 1.0f};
+			break;
+		case 'd':
+			NextColor = ColorRGBA{0.15f, 0.15f, 0.15f, 1.0f};
+			break;
+		case 'w':
+			NextColor = ColorRGBA{1.0f, 1.0f, 1.0f, 1.0f};
+			break;
+		default:
+			NextColor = m_Color;
+			return false;
+		}
+
+		return true;
+	}
+
+	struct STextStack
+	{
+		ColorRGBA m_Color;
+		int m_CharType;
+	};
+
 	virtual void TextEx(CTextCursor *pCursor, const char *pText, int Length)
 	{
 		dbg_assert(pText != NULL, "null text pointer");
 
 		if(!*pText)
 			return;
+
+		std::vector<STextStack> ColorStack;
+		ColorStack.push_back(STextStack{m_Color, -1});
+		bool SkipNextChar = false;
 
 		CFont *pFont = pCursor->m_pFont;
 		CFontSizeData *pSizeData = NULL;
@@ -931,7 +981,7 @@ public:
 			{
 				Graphics()->TextureClear();
 				Graphics()->TextQuadsBegin();
-				Graphics()->SetColor(m_Color);
+				Graphics()->SetColor(ColorStack.back().m_Color);
 			}
 			else
 			{
@@ -1031,6 +1081,55 @@ public:
 						break;
 					}
 
+					if(Character == '"')
+					{
+						if(ColorStack.back().m_CharType == 2)
+						{
+							ColorStack.pop_back();
+						}
+						else
+						{
+							ColorStack.push_back(STextStack{ColorStack.back().m_Color, 2});
+						}
+					}
+					else if(Character == '\'')
+					{
+						if(ColorStack.back().m_CharType == 1)
+						{
+							ColorStack.pop_back();
+						}
+						else
+						{
+							ColorStack.push_back(STextStack{ColorStack.back().m_Color, 1});
+						}
+					}
+					else if(Character == ':' || Character == '&' || Character == ',' || Character == '(' || Character == ')' || Character == ';' || Character == '.' || Character == '-')
+					{
+						ColorStack.back().m_Color = m_Color;
+					}
+					else if(Character == '^')
+					{
+						ColorRGBA NextColor;
+
+						if(GetCharColorRGBA(NextCharacter, NextColor))
+						{
+							ColorStack.back().m_Color = NextColor;
+							SkipNextChar = true;
+							continue;
+						}
+					}
+
+					if(SkipNextChar)
+					{
+						SkipNextChar = false;
+						continue;
+					}
+
+					if(pCursor->m_Flags & TEXTFLAG_RENDER)
+					{
+						Graphics()->SetColor(ColorStack.back().m_Color);
+					}
+
 					float BearingX = (!ApplyBearingX ? 0.f : pChr->m_OffsetX) * Scale * Size;
 					float CharWidth = pChr->m_Width * Scale * Size;
 
@@ -1049,7 +1148,7 @@ public:
 						}
 					}
 
-					if(pCursor->m_Flags & TEXTFLAG_RENDER && m_Color.a != 0.f)
+					if(pCursor->m_Flags & TEXTFLAG_RENDER && ColorStack.back().m_Color.a != 0.f)
 					{
 						if(Graphics()->IsTextBufferingEnabled())
 							Graphics()->QuadsSetSubset(pChr->m_aUVs[0], pChr->m_aUVs[3], pChr->m_aUVs[2], pChr->m_aUVs[1]);
@@ -1110,6 +1209,8 @@ public:
 				// render non outlined
 				Graphics()->QuadsDrawCurrentVertices(false);
 			}
+
+			Graphics()->SetColor(ColorRGBA{1, 1, 1, 1});
 		}
 
 		pCursor->m_X = DrawX;
@@ -1207,6 +1308,10 @@ public:
 	virtual void AppendTextContainer(CTextCursor *pCursor, int TextContainerIndex, const char *pText, int Length = -1)
 	{
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
+
+		std::vector<STextStack> ColorStack;
+		ColorStack.push_back(STextStack{m_Color, -1});
+		bool SkipNextChar = false;
 
 		CFontSizeData *pSizeData = NULL;
 
@@ -1356,6 +1461,50 @@ public:
 						break;
 					}
 
+					if(Character == '"')
+					{
+						if(ColorStack.back().m_CharType == 2)
+						{
+							ColorStack.pop_back();
+						}
+						else
+						{
+							ColorStack.push_back(STextStack{ColorStack.back().m_Color, 2});
+						}
+					}
+					else if(Character == '\'')
+					{
+						if(ColorStack.back().m_CharType == 1)
+						{
+							ColorStack.pop_back();
+						}
+						else
+						{
+							ColorStack.push_back(STextStack{ColorStack.back().m_Color, 1});
+						}
+					}
+					else if(Character == ':' || Character == '&' || Character == ',' || Character == '(' || Character == ')' || Character == ';' || Character == '.' || Character == '-')
+					{
+						ColorStack.back().m_Color = m_Color;
+					}
+					else if(Character == '^')
+					{
+						ColorRGBA NextColor;
+
+						if(GetCharColorRGBA(NextCharacter, NextColor))
+						{
+							ColorStack.back().m_Color = NextColor;
+							SkipNextChar = true;
+							continue;
+						}
+					}
+
+					if(SkipNextChar)
+					{
+						SkipNextChar = false;
+						continue;
+					}
+
 					float BearingX = (!ApplyBearingX ? 0.f : pChr->m_OffsetX) * Scale * Size;
 					float CharWidth = pChr->m_Width * Scale * Size;
 
@@ -1374,7 +1523,7 @@ public:
 					}
 
 					// don't add text that isn't drawn, the color overwrite is used for that
-					if(m_Color.a != 0.f)
+					if(ColorStack.back().m_Color.a != 0.f)
 					{
 						TextContainer.m_StringInfo.m_CharacterQuads.push_back(STextCharQuad());
 						STextCharQuad &TextCharQuad = TextContainer.m_StringInfo.m_CharacterQuads.back();
@@ -1385,37 +1534,37 @@ public:
 						TextCharQuad.m_Vertices[0].m_Y = Y - BearingY;
 						TextCharQuad.m_Vertices[0].m_U = pChr->m_aUVs[0];
 						TextCharQuad.m_Vertices[0].m_V = pChr->m_aUVs[3];
-						TextCharQuad.m_Vertices[0].m_Color.m_R = (unsigned char)(m_Color.r * 255.f);
-						TextCharQuad.m_Vertices[0].m_Color.m_G = (unsigned char)(m_Color.g * 255.f);
-						TextCharQuad.m_Vertices[0].m_Color.m_B = (unsigned char)(m_Color.b * 255.f);
-						TextCharQuad.m_Vertices[0].m_Color.m_A = (unsigned char)(m_Color.a * 255.f);
+						TextCharQuad.m_Vertices[0].m_Color.m_R = (unsigned char)(ColorStack.back().m_Color.r * 255.f);
+						TextCharQuad.m_Vertices[0].m_Color.m_G = (unsigned char)(ColorStack.back().m_Color.g * 255.f);
+						TextCharQuad.m_Vertices[0].m_Color.m_B = (unsigned char)(ColorStack.back().m_Color.b * 255.f);
+						TextCharQuad.m_Vertices[0].m_Color.m_A = (unsigned char)(ColorStack.back().m_Color.a * 255.f);
 
 						TextCharQuad.m_Vertices[1].m_X = (DrawX + CharKerning) + BearingX + CharWidth;
 						TextCharQuad.m_Vertices[1].m_Y = Y - BearingY;
 						TextCharQuad.m_Vertices[1].m_U = pChr->m_aUVs[2];
 						TextCharQuad.m_Vertices[1].m_V = pChr->m_aUVs[3];
-						TextCharQuad.m_Vertices[1].m_Color.m_R = (unsigned char)(m_Color.r * 255.f);
-						TextCharQuad.m_Vertices[1].m_Color.m_G = (unsigned char)(m_Color.g * 255.f);
-						TextCharQuad.m_Vertices[1].m_Color.m_B = (unsigned char)(m_Color.b * 255.f);
-						TextCharQuad.m_Vertices[1].m_Color.m_A = (unsigned char)(m_Color.a * 255.f);
+						TextCharQuad.m_Vertices[1].m_Color.m_R = (unsigned char)(ColorStack.back().m_Color.r * 255.f);
+						TextCharQuad.m_Vertices[1].m_Color.m_G = (unsigned char)(ColorStack.back().m_Color.g * 255.f);
+						TextCharQuad.m_Vertices[1].m_Color.m_B = (unsigned char)(ColorStack.back().m_Color.b * 255.f);
+						TextCharQuad.m_Vertices[1].m_Color.m_A = (unsigned char)(ColorStack.back().m_Color.a * 255.f);
 
 						TextCharQuad.m_Vertices[2].m_X = (DrawX + CharKerning) + BearingX + CharWidth;
 						TextCharQuad.m_Vertices[2].m_Y = Y - BearingY - CharHeight;
 						TextCharQuad.m_Vertices[2].m_U = pChr->m_aUVs[2];
 						TextCharQuad.m_Vertices[2].m_V = pChr->m_aUVs[1];
-						TextCharQuad.m_Vertices[2].m_Color.m_R = (unsigned char)(m_Color.r * 255.f);
-						TextCharQuad.m_Vertices[2].m_Color.m_G = (unsigned char)(m_Color.g * 255.f);
-						TextCharQuad.m_Vertices[2].m_Color.m_B = (unsigned char)(m_Color.b * 255.f);
-						TextCharQuad.m_Vertices[2].m_Color.m_A = (unsigned char)(m_Color.a * 255.f);
+						TextCharQuad.m_Vertices[2].m_Color.m_R = (unsigned char)(ColorStack.back().m_Color.r * 255.f);
+						TextCharQuad.m_Vertices[2].m_Color.m_G = (unsigned char)(ColorStack.back().m_Color.g * 255.f);
+						TextCharQuad.m_Vertices[2].m_Color.m_B = (unsigned char)(ColorStack.back().m_Color.b * 255.f);
+						TextCharQuad.m_Vertices[2].m_Color.m_A = (unsigned char)(ColorStack.back().m_Color.a * 255.f);
 
 						TextCharQuad.m_Vertices[3].m_X = (DrawX + CharKerning) + BearingX;
 						TextCharQuad.m_Vertices[3].m_Y = Y - BearingY - CharHeight;
 						TextCharQuad.m_Vertices[3].m_U = pChr->m_aUVs[0];
 						TextCharQuad.m_Vertices[3].m_V = pChr->m_aUVs[1];
-						TextCharQuad.m_Vertices[3].m_Color.m_R = (unsigned char)(m_Color.r * 255.f);
-						TextCharQuad.m_Vertices[3].m_Color.m_G = (unsigned char)(m_Color.g * 255.f);
-						TextCharQuad.m_Vertices[3].m_Color.m_B = (unsigned char)(m_Color.b * 255.f);
-						TextCharQuad.m_Vertices[3].m_Color.m_A = (unsigned char)(m_Color.a * 255.f);
+						TextCharQuad.m_Vertices[3].m_Color.m_R = (unsigned char)(ColorStack.back().m_Color.r * 255.f);
+						TextCharQuad.m_Vertices[3].m_Color.m_G = (unsigned char)(ColorStack.back().m_Color.g * 255.f);
+						TextCharQuad.m_Vertices[3].m_Color.m_B = (unsigned char)(ColorStack.back().m_Color.b * 255.f);
+						TextCharQuad.m_Vertices[3].m_Color.m_A = (unsigned char)(ColorStack.back().m_Color.a * 255.f);
 					}
 
 					pCursor->m_MaxCharacterHeight = maximum(pCursor->m_MaxCharacterHeight, CharHeight + BearingY);
