@@ -1,4 +1,3 @@
-
 // ------------ CCommandProcessorFragment_OpenGL3_3
 int CCommandProcessorFragment_OpenGL3_3::TexFormatToNewOpenGLFormat(int TexFormat)
 {
@@ -53,6 +52,8 @@ void CCommandProcessorFragment_OpenGL3_3::InitPrimExProgram(CGLSLPrimitiveExProg
 
 void CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand)
 {
+	InitOpenGL(pCommand);
+
 	m_OpenGLTextureLodBIAS = g_Config.m_GfxOpenGLTextureLODBIAS;
 
 	m_UseMultipleTextureUnits = g_Config.m_GfxEnableTextureUnitOptimization;
@@ -93,11 +94,11 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Init(const SCommand_Init *pCommand
 	m_pSpriteProgramMultiple = new CGLSLSpriteMultipleProgram;
 	m_LastProgramID = 0;
 
-	CGLSLCompiler ShaderCompiler(g_Config.m_GfxOpenGLMajor, g_Config.m_GfxOpenGLMinor, g_Config.m_GfxOpenGLPatch);
+	CGLSLCompiler ShaderCompiler(g_Config.m_GfxOpenGLMajor, g_Config.m_GfxOpenGLMinor, g_Config.m_GfxOpenGLPatch, m_IsOpenGLES, m_OpenGLTextureLodBIAS / 1000.0f);
 
 	GLint CapVal;
 	glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &CapVal);
-	;
+
 	m_MaxQuadsAtOnce = minimum<int>(((CapVal - 20) / (3 * 4)), m_MaxQuadsPossible);
 
 	{
@@ -628,18 +629,9 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffe
 
 	int Oglformat = TexFormatToNewOpenGLFormat(pCommand->m_Format);
 	int StoreOglformat = TexFormatToNewOpenGLFormat(pCommand->m_StoreFormat);
+	if(StoreOglformat == GL_RED)
+		StoreOglformat = GL_R8;
 
-	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_COMPRESSED)
-	{
-		switch(StoreOglformat)
-		{
-		case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB; break;
-		// COMPRESSED_ALPHA is deprecated, so use different single channel format.
-		case GL_RED: StoreOglformat = GL_COMPRESSED_RED; break;
-		case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA; break;
-		default: StoreOglformat = GL_COMPRESSED_RGBA;
-		}
-	}
 	int Slot = 0;
 	if(m_UseMultipleTextureUnits)
 	{
@@ -660,14 +652,6 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffe
 		glBindSampler(Slot, m_Textures[pCommand->m_Slot].m_Sampler);
 	}
 
-	if(Oglformat == GL_RED)
-	{
-		//Bind the texture 2D.
-		GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-		StoreOglformat = GL_R8;
-	}
-
 	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_NOMIPMAPS)
 	{
 		if((pCommand->m_Flags & CCommandBuffer::TEXFLAG_NO_2D_TEXTURE) == 0)
@@ -685,8 +669,12 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffe
 		{
 			glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			if(m_OpenGLTextureLodBIAS != 0)
+
+#ifndef CONF_BACKEND_OPENGL_ES
+			if(m_OpenGLTextureLodBIAS != 0 && !m_IsOpenGLES)
 				glSamplerParameterf(m_Textures[pCommand->m_Slot].m_Sampler, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
+#endif
+
 			//prevent mipmap display bugs, when zooming out far
 			if(Width >= 1024 && Height >= 1024)
 			{
@@ -709,8 +697,11 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffe
 			glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
-			if(m_OpenGLTextureLodBIAS != 0)
+
+#ifndef CONF_BACKEND_OPENGL_ES
+			if(m_OpenGLTextureLodBIAS != 0 && !m_IsOpenGLES)
 				glSamplerParameterf(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
+#endif
 
 			int ImageColorChannels = TexFormatToImageColorChannelCount(pCommand->m_Format);
 
@@ -753,13 +744,6 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Texture_Create(const CCommandBuffe
 					glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, StoreOglformat, Image3DWidth, Image3DHeight, 256, 0, Oglformat, GL_UNSIGNED_BYTE, p3DImageData);
 				}
 				glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
-
-				if(StoreOglformat == GL_R8)
-				{
-					//Bind the texture 2D.
-					GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-					glTexParameteriv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				}
 			}
 
 			if(!IsSingleLayer)

@@ -1,6 +1,30 @@
-
-
 // ------------ CCommandProcessorFragment_OpenGL
+bool CCommandProcessorFragment_OpenGL::Texture2DTo3D(void *pImageBuffer, int ImageWidth, int ImageHeight, int ImageColorChannelCount, int SplitCountWidth, int SplitCountHeight, void *pTarget3DImageData, int &Target3DImageWidth, int &Target3DImageHeight)
+{
+	Target3DImageWidth = ImageWidth / SplitCountWidth;
+	Target3DImageHeight = ImageHeight / SplitCountHeight;
+
+	size_t FullImageWidth = (size_t)ImageWidth * ImageColorChannelCount;
+
+	for(int Y = 0; Y < SplitCountHeight; ++Y)
+	{
+		for(int X = 0; X < SplitCountWidth; ++X)
+		{
+			for(int Y3D = 0; Y3D < Target3DImageHeight; ++Y3D)
+			{
+				int DepthIndex = X + Y * SplitCountWidth;
+
+				size_t TargetImageFullWidth = (size_t)Target3DImageWidth * ImageColorChannelCount;
+				size_t TargetImageFullSize = (size_t)TargetImageFullWidth * Target3DImageHeight;
+				ptrdiff_t ImageOffset = (ptrdiff_t)(((size_t)Y * FullImageWidth * (size_t)Target3DImageHeight) + ((size_t)Y3D * FullImageWidth) + ((size_t)X * TargetImageFullWidth));
+				ptrdiff_t TargetImageOffset = (ptrdiff_t)(TargetImageFullSize * (size_t)DepthIndex + ((size_t)Y3D * TargetImageFullWidth));
+				mem_copy(((uint8_t *)pTarget3DImageData) + TargetImageOffset, ((uint8_t *)pImageBuffer) + (ptrdiff_t)(ImageOffset), TargetImageFullWidth);
+			}
+		}
+	}
+
+	return true;
+}
 
 int CCommandProcessorFragment_OpenGL::TexFormatToOpenGLFormat(int TexFormat)
 {
@@ -140,8 +164,388 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::SState &St
 	glOrtho(State.m_ScreenTL.x, State.m_ScreenBR.x, State.m_ScreenBR.y, State.m_ScreenTL.y, -10.0f, 10.f);
 }
 
+static void ParseVersionString(EBackendType BackendType, const char *pStr, int &VersionMajor, int &VersionMinor, int &VersionPatch)
+{
+	if(pStr)
+	{
+		// if backend is GLES, it starts with "OpenGL ES " or OpenGL ES-CM for older contexts, rest is the same
+		if(BackendType == BACKEND_TYPE_OPENGL_ES)
+		{
+			int StrLenGLES = str_length("OpenGL ES ");
+			int StrLenGLESCM = str_length("OpenGL ES-CM ");
+			if(str_comp_num(pStr, "OpenGL ES ", StrLenGLES) == 0)
+				pStr += StrLenGLES;
+			else if(str_comp_num(pStr, "OpenGL ES-CM ", StrLenGLESCM) == 0)
+				pStr += StrLenGLESCM;
+		}
+
+		char aCurNumberStr[32];
+		size_t CurNumberStrLen = 0;
+		size_t TotalNumbersPassed = 0;
+		int aNumbers[3] = {0};
+		bool LastWasNumber = false;
+		while(*pStr && TotalNumbersPassed < 3)
+		{
+			if(*pStr >= '0' && *pStr <= '9')
+			{
+				aCurNumberStr[CurNumberStrLen++] = (char)*pStr;
+				LastWasNumber = true;
+			}
+			else if(LastWasNumber && (*pStr == '.' || *pStr == ' ' || *pStr == '\0'))
+			{
+				int CurNumber = 0;
+				if(CurNumberStrLen > 0)
+				{
+					aCurNumberStr[CurNumberStrLen] = 0;
+					CurNumber = str_toint(aCurNumberStr);
+					aNumbers[TotalNumbersPassed++] = CurNumber;
+					CurNumberStrLen = 0;
+				}
+
+				LastWasNumber = false;
+
+				if(*pStr != '.')
+					break;
+			}
+			else
+			{
+				break;
+			}
+
+			++pStr;
+		}
+
+		VersionMajor = aNumbers[0];
+		VersionMinor = aNumbers[1];
+		VersionPatch = aNumbers[2];
+	}
+}
+
+#ifndef CONF_BACKEND_OPENGL_ES
+static const char *GetGLErrorName(GLenum Type)
+{
+	if(Type == GL_DEBUG_TYPE_ERROR)
+		return "ERROR";
+	else if(Type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR)
+		return "DEPRECATED BEHAVIOR";
+	else if(Type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR)
+		return "UNDEFINED BEHAVIOR";
+	else if(Type == GL_DEBUG_TYPE_PORTABILITY)
+		return "PORTABILITY";
+	else if(Type == GL_DEBUG_TYPE_PERFORMANCE)
+		return "PERFORMANCE";
+	else if(Type == GL_DEBUG_TYPE_OTHER)
+		return "OTHER";
+	else if(Type == GL_DEBUG_TYPE_MARKER)
+		return "MARKER";
+	else if(Type == GL_DEBUG_TYPE_PUSH_GROUP)
+		return "PUSH_GROUP";
+	else if(Type == GL_DEBUG_TYPE_POP_GROUP)
+		return "POP_GROUP";
+	return "UNKNOWN";
+};
+
+static const char *GetGLSeverity(GLenum Type)
+{
+	if(Type == GL_DEBUG_SEVERITY_HIGH)
+		return "high"; // All OpenGL Errors, shader compilation/linking errors, or highly-dangerous undefined behavior
+	else if(Type == GL_DEBUG_SEVERITY_MEDIUM)
+		return "medium"; // Major performance warnings, shader compilation/linking warnings, or the use of deprecated functionality
+	else if(Type == GL_DEBUG_SEVERITY_LOW)
+		return "low"; // Redundant state change performance warning, or unimportant undefined behavior
+	else if(Type == GL_DEBUG_SEVERITY_NOTIFICATION)
+		return "notification"; // Anything that isn't an error or performance issue.
+
+	return "unknown";
+}
+
+static void GLAPIENTRY
+GfxOpenGLMessageCallback(GLenum source,
+	GLenum type,
+	GLuint id,
+	GLenum severity,
+	GLsizei length,
+	const GLchar *message,
+	const void *userParam)
+{
+	dbg_msg("gfx", "[%s] (importance: %s) %s", GetGLErrorName(type), GetGLSeverity(severity), message);
+}
+#endif
+
+void CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
+{
+	m_IsOpenGLES = pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL_ES;
+
+	// set some default settings
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DEPTH_TEST);
+
+	if(!IsNewApi())
+		glAlphaFunc(GL_GREATER, 0);
+	glEnable(GL_ALPHA_TEST);
+	glDepthMask(0);
+
+#ifndef CONF_BACKEND_OPENGL_ES
+	if(g_Config.m_DbgGfx)
+	{
+		if(GLEW_KHR_debug || GLEW_ARB_debug_output)
+		{
+			// During init, enable debug output
+			if(GLEW_KHR_debug)
+			{
+				glEnable(GL_DEBUG_OUTPUT);
+				glDebugMessageCallback(GfxOpenGLMessageCallback, 0);
+			}
+			else if(GLEW_ARB_debug_output)
+			{
+				glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+				glDebugMessageCallbackARB(GfxOpenGLMessageCallback, 0);
+			}
+			dbg_msg("gfx", "Enabled OpenGL debug mode");
+		}
+		else
+			dbg_msg("gfx", "Requested OpenGL debug mode, but the driver does not support the required extension");
+	}
+#endif
+
+	const char *pVendorString = (const char *)glGetString(GL_VENDOR);
+	dbg_msg("opengl", "Vendor string: %s", pVendorString);
+
+	// check what this context can do
+	const char *pVersionString = (const char *)glGetString(GL_VERSION);
+	dbg_msg("opengl", "Version string: %s", pVersionString);
+
+	const char *pRendererString = (const char *)glGetString(GL_RENDERER);
+
+	str_copy(pCommand->m_pVendorString, pVendorString, gs_GPUInfoStringSize);
+	str_copy(pCommand->m_pVersionString, pVersionString, gs_GPUInfoStringSize);
+	str_copy(pCommand->m_pRendererString, pRendererString, gs_GPUInfoStringSize);
+
+	// parse version string
+	ParseVersionString(pCommand->m_RequestedBackend, pVersionString, pCommand->m_pCapabilities->m_ContextMajor, pCommand->m_pCapabilities->m_ContextMinor, pCommand->m_pCapabilities->m_ContextPatch);
+
+	*pCommand->m_pInitError = 0;
+
+	int BlocklistMajor = -1, BlocklistMinor = -1, BlocklistPatch = -1;
+	const char *pErrString = ParseBlocklistDriverVersions(pVendorString, pVersionString, BlocklistMajor, BlocklistMinor, BlocklistPatch);
+	//if the driver is buggy, and the requested GL version is the default, fallback
+	if(pErrString != NULL && pCommand->m_RequestedMajor == 3 && pCommand->m_RequestedMinor == 0 && pCommand->m_RequestedPatch == 0)
+	{
+		// if not already in the error state, set the GL version
+		if(g_Config.m_GfxDriverIsBlocked == 0)
+		{
+			// fallback to known good GL version
+			pCommand->m_pCapabilities->m_ContextMajor = BlocklistMajor;
+			pCommand->m_pCapabilities->m_ContextMinor = BlocklistMinor;
+			pCommand->m_pCapabilities->m_ContextPatch = BlocklistPatch;
+
+			// set backend error string
+			*pCommand->m_pErrStringPtr = pErrString;
+			*pCommand->m_pInitError = -2;
+
+			g_Config.m_GfxDriverIsBlocked = 1;
+		}
+	}
+	// if the driver was in a blocked error state, but is not anymore, reset all config variables
+	else if(pErrString == NULL && g_Config.m_GfxDriverIsBlocked == 1)
+	{
+		pCommand->m_pCapabilities->m_ContextMajor = 3;
+		pCommand->m_pCapabilities->m_ContextMinor = 0;
+		pCommand->m_pCapabilities->m_ContextPatch = 0;
+
+		// tell the caller to reinitialize the context
+		*pCommand->m_pInitError = -2;
+
+		g_Config.m_GfxDriverIsBlocked = 0;
+	}
+
+	int MajorV = pCommand->m_pCapabilities->m_ContextMajor;
+
+	if(pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL)
+	{
+#ifndef CONF_BACKEND_OPENGL_ES
+		int MinorV = pCommand->m_pCapabilities->m_ContextMinor;
+		if(*pCommand->m_pInitError == 0)
+		{
+			if(MajorV < pCommand->m_RequestedMajor)
+			{
+				*pCommand->m_pInitError = -2;
+			}
+			else if(MajorV == pCommand->m_RequestedMajor)
+			{
+				if(MinorV < pCommand->m_RequestedMinor)
+				{
+					*pCommand->m_pInitError = -2;
+				}
+				else if(MinorV == pCommand->m_RequestedMinor)
+				{
+					int PatchV = pCommand->m_pCapabilities->m_ContextPatch;
+					if(PatchV < pCommand->m_RequestedPatch)
+					{
+						*pCommand->m_pInitError = -2;
+					}
+				}
+			}
+		}
+
+		if(*pCommand->m_pInitError == 0)
+		{
+			MajorV = pCommand->m_RequestedMajor;
+			MinorV = pCommand->m_RequestedMinor;
+
+			pCommand->m_pCapabilities->m_2DArrayTexturesAsExtension = false;
+			pCommand->m_pCapabilities->m_NPOTTextures = true;
+
+			if(MajorV >= 4 || (MajorV == 3 && MinorV == 3))
+			{
+				pCommand->m_pCapabilities->m_TileBuffering = true;
+				pCommand->m_pCapabilities->m_QuadBuffering = true;
+				pCommand->m_pCapabilities->m_TextBuffering = true;
+				pCommand->m_pCapabilities->m_QuadContainerBuffering = true;
+				pCommand->m_pCapabilities->m_ShaderSupport = true;
+
+				pCommand->m_pCapabilities->m_MipMapping = true;
+				pCommand->m_pCapabilities->m_3DTextures = true;
+				pCommand->m_pCapabilities->m_2DArrayTextures = true;
+			}
+			else if(MajorV == 3)
+			{
+				pCommand->m_pCapabilities->m_MipMapping = true;
+				// check for context native 2D array texture size
+				pCommand->m_pCapabilities->m_3DTextures = false;
+				pCommand->m_pCapabilities->m_2DArrayTextures = false;
+				pCommand->m_pCapabilities->m_ShaderSupport = true;
+
+				int TextureLayers = 0;
+				glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &TextureLayers);
+				if(TextureLayers >= 256)
+				{
+					pCommand->m_pCapabilities->m_2DArrayTextures = true;
+				}
+
+				int Texture3DSize = 0;
+				glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &Texture3DSize);
+				if(Texture3DSize >= 256)
+				{
+					pCommand->m_pCapabilities->m_3DTextures = true;
+				}
+
+				if(!pCommand->m_pCapabilities->m_3DTextures && !pCommand->m_pCapabilities->m_2DArrayTextures)
+				{
+					*pCommand->m_pInitError = -2;
+					pCommand->m_pCapabilities->m_ContextMajor = 1;
+					pCommand->m_pCapabilities->m_ContextMinor = 5;
+					pCommand->m_pCapabilities->m_ContextPatch = 0;
+				}
+
+				pCommand->m_pCapabilities->m_TileBuffering = pCommand->m_pCapabilities->m_2DArrayTextures || pCommand->m_pCapabilities->m_3DTextures;
+				pCommand->m_pCapabilities->m_QuadBuffering = false;
+				pCommand->m_pCapabilities->m_TextBuffering = false;
+				pCommand->m_pCapabilities->m_QuadContainerBuffering = false;
+			}
+			else if(MajorV == 2)
+			{
+				pCommand->m_pCapabilities->m_MipMapping = true;
+				// check for context extension: 2D array texture and its max size
+				pCommand->m_pCapabilities->m_3DTextures = false;
+				pCommand->m_pCapabilities->m_2DArrayTextures = false;
+
+				pCommand->m_pCapabilities->m_ShaderSupport = false;
+				if(MinorV >= 1)
+					pCommand->m_pCapabilities->m_ShaderSupport = true;
+
+				int Texture3DSize = 0;
+				glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &Texture3DSize);
+				if(Texture3DSize >= 256)
+				{
+					pCommand->m_pCapabilities->m_3DTextures = true;
+				}
+
+				// check for array texture extension
+				if(pCommand->m_pCapabilities->m_ShaderSupport && GLEW_EXT_texture_array)
+				{
+					int TextureLayers = 0;
+					glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS_EXT, &TextureLayers);
+					if(TextureLayers >= 256)
+					{
+						pCommand->m_pCapabilities->m_2DArrayTextures = true;
+						pCommand->m_pCapabilities->m_2DArrayTexturesAsExtension = true;
+					}
+				}
+
+				pCommand->m_pCapabilities->m_TileBuffering = pCommand->m_pCapabilities->m_2DArrayTextures || pCommand->m_pCapabilities->m_3DTextures;
+				pCommand->m_pCapabilities->m_QuadBuffering = false;
+				pCommand->m_pCapabilities->m_TextBuffering = false;
+				pCommand->m_pCapabilities->m_QuadContainerBuffering = false;
+
+				if(GLEW_ARB_texture_non_power_of_two || pCommand->m_GlewMajor > 2)
+					pCommand->m_pCapabilities->m_NPOTTextures = true;
+				else
+				{
+					pCommand->m_pCapabilities->m_NPOTTextures = false;
+				}
+
+				if(!pCommand->m_pCapabilities->m_NPOTTextures || (!pCommand->m_pCapabilities->m_3DTextures && !pCommand->m_pCapabilities->m_2DArrayTextures))
+				{
+					*pCommand->m_pInitError = -2;
+					pCommand->m_pCapabilities->m_ContextMajor = 1;
+					pCommand->m_pCapabilities->m_ContextMinor = 5;
+					pCommand->m_pCapabilities->m_ContextPatch = 0;
+				}
+			}
+			else if(MajorV < 2)
+			{
+				pCommand->m_pCapabilities->m_TileBuffering = false;
+				pCommand->m_pCapabilities->m_QuadBuffering = false;
+				pCommand->m_pCapabilities->m_TextBuffering = false;
+				pCommand->m_pCapabilities->m_QuadContainerBuffering = false;
+				pCommand->m_pCapabilities->m_ShaderSupport = false;
+
+				pCommand->m_pCapabilities->m_MipMapping = false;
+				pCommand->m_pCapabilities->m_3DTextures = false;
+				pCommand->m_pCapabilities->m_2DArrayTextures = false;
+				pCommand->m_pCapabilities->m_NPOTTextures = false;
+			}
+		}
+#endif
+	}
+	else if(pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL_ES)
+	{
+		if(MajorV < 3)
+		{
+			pCommand->m_pCapabilities->m_TileBuffering = false;
+			pCommand->m_pCapabilities->m_QuadBuffering = false;
+			pCommand->m_pCapabilities->m_TextBuffering = false;
+			pCommand->m_pCapabilities->m_QuadContainerBuffering = false;
+			pCommand->m_pCapabilities->m_ShaderSupport = false;
+
+			pCommand->m_pCapabilities->m_MipMapping = false;
+			pCommand->m_pCapabilities->m_3DTextures = false;
+			pCommand->m_pCapabilities->m_2DArrayTextures = false;
+			pCommand->m_pCapabilities->m_NPOTTextures = false;
+		}
+		else
+		{
+			pCommand->m_pCapabilities->m_TileBuffering = true;
+			pCommand->m_pCapabilities->m_QuadBuffering = true;
+			pCommand->m_pCapabilities->m_TextBuffering = true;
+			pCommand->m_pCapabilities->m_QuadContainerBuffering = true;
+			pCommand->m_pCapabilities->m_ShaderSupport = true;
+
+			pCommand->m_pCapabilities->m_MipMapping = true;
+			pCommand->m_pCapabilities->m_3DTextures = true;
+			pCommand->m_pCapabilities->m_2DArrayTextures = true;
+			pCommand->m_pCapabilities->m_NPOTTextures = true;
+		}
+	}
+}
+
 void CCommandProcessorFragment_OpenGL::Cmd_Init(const SCommand_Init *pCommand)
 {
+	InitOpenGL(pCommand);
+
 	m_pTextureMemoryUsage = pCommand->m_pTextureMemoryUsage;
 	m_pTextureMemoryUsage->store(0, std::memory_order_relaxed);
 	m_MaxTexSize = -1;
@@ -333,17 +737,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 	int Oglformat = TexFormatToOpenGLFormat(pCommand->m_Format);
 	int StoreOglformat = TexFormatToOpenGLFormat(pCommand->m_StoreFormat);
 
-	if(pCommand->m_Flags & CCommandBuffer::TEXFLAG_COMPRESSED)
-	{
-		switch(StoreOglformat)
-		{
-		case GL_RGB: StoreOglformat = GL_COMPRESSED_RGB_ARB; break;
-		case GL_ALPHA: StoreOglformat = GL_COMPRESSED_ALPHA_ARB; break;
-		case GL_RGBA: StoreOglformat = GL_COMPRESSED_RGBA_ARB; break;
-		default: StoreOglformat = GL_COMPRESSED_RGBA_ARB;
-		}
-	}
-
 	if((pCommand->m_Flags & CCommandBuffer::TEXFLAG_NO_2D_TEXTURE) == 0)
 	{
 		glGenTextures(1, &m_Textures[pCommand->m_Slot].m_Tex);
@@ -366,8 +759,12 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-			if(m_OpenGLTextureLodBIAS != 0)
+
+#ifndef CONF_BACKEND_OPENGL_ES
+			if(m_OpenGLTextureLodBIAS != 0 && !m_IsOpenGLES)
 				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
+#endif
+
 			glTexImage2D(GL_TEXTURE_2D, 0, StoreOglformat, Width, Height, 0, Oglformat, GL_UNSIGNED_BYTE, pTexData);
 		}
 
@@ -416,16 +813,22 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 			glTexParameteri(Target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(Target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(Target, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
-			if(m_OpenGLTextureLodBIAS != 0)
+
+#ifndef CONF_BACKEND_OPENGL_ES
+			if(m_OpenGLTextureLodBIAS != 0 && !m_IsOpenGLES)
 				glTexParameterf(Target, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
+#endif
 
 			if(IsNewApi())
 			{
 				glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 				glSamplerParameteri(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
-				if(m_OpenGLTextureLodBIAS != 0)
+
+#ifndef CONF_BACKEND_OPENGL_ES
+				if(m_OpenGLTextureLodBIAS != 0 && !m_IsOpenGLES)
 					glSamplerParameterf(m_Textures[pCommand->m_Slot].m_Sampler2DArray, GL_TEXTURE_LOD_BIAS, ((GLfloat)m_OpenGLTextureLodBIAS / 1000.0f));
+#endif
 
 				glBindSampler(0, 0);
 			}
@@ -470,13 +873,6 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 				{
 					glTexImage3D(Target, 0, StoreOglformat, Image3DWidth, Image3DHeight, 256, 0, Oglformat, GL_UNSIGNED_BYTE, p3DImageData);
 				}
-
-				/*if(StoreOglformat == GL_R8)
-				{
-					//Bind the texture 2D.
-					GLint swizzleMask[] = {GL_ONE, GL_ONE, GL_ONE, GL_RED};
-					glTexParameteriv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				}*/
 			}
 
 			if(!IsSingleLayer)
@@ -520,7 +916,9 @@ void CCommandProcessorFragment_OpenGL::Cmd_Render(const CCommandBuffer::SCommand
 	switch(pCommand->m_PrimType)
 	{
 	case CCommandBuffer::PRIMTYPE_QUADS:
+#ifndef CONF_BACKEND_OPENGL_ES
 		glDrawArrays(GL_QUADS, 0, pCommand->m_PrimCount * 4);
+#endif
 		break;
 	case CCommandBuffer::PRIMTYPE_LINES:
 		glDrawArrays(GL_LINES, 0, pCommand->m_PrimCount * 2);
@@ -1141,6 +1539,7 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 	m_HasShaders = pCommand->m_pCapabilities->m_ShaderSupport;
 
 	bool HasAllFunc = true;
+#ifndef CONF_BACKEND_OPENGL_ES
 	if(m_HasShaders)
 	{
 		HasAllFunc &= (glUniformMatrix4x2fv != NULL) && (glGenBuffers != NULL);
@@ -1162,6 +1561,7 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 		HasAllFunc &= (glGetShaderInfoLog != NULL) && (glDeleteShader != NULL);
 		HasAllFunc &= (glCreateShader != NULL);
 	}
+#endif
 
 	bool AnalysisCorrect = true;
 	if(HasAllFunc)
@@ -1173,7 +1573,7 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 			m_pPrimitive3DProgram = new CGLSLPrimitiveProgram;
 			m_pPrimitive3DProgramTextured = new CGLSLPrimitiveProgram;
 
-			CGLSLCompiler ShaderCompiler(g_Config.m_GfxOpenGLMajor, g_Config.m_GfxOpenGLMinor, g_Config.m_GfxOpenGLPatch);
+			CGLSLCompiler ShaderCompiler(g_Config.m_GfxOpenGLMajor, g_Config.m_GfxOpenGLMinor, g_Config.m_GfxOpenGLPatch, m_IsOpenGLES, m_OpenGLTextureLodBIAS / 1000.0f);
 			ShaderCompiler.SetHasTextureArray(pCommand->m_pCapabilities->m_2DArrayTextures);
 
 			if(pCommand->m_pCapabilities->m_2DArrayTextures)
