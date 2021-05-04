@@ -245,6 +245,12 @@ void CPlayers::RenderPlayer(
 	CAnimState State;
 	State.Set(&g_pData->m_aAnimations[ANIM_BASE], 0);
 
+	int iw = clamp(Player.m_Weapon, 0, NUM_WEAPONS - 1);
+	if(iw == WEAPON_GUN)
+		iw = WEAPON_HAMMER;
+	else if(iw == WEAPON_HAMMER)
+		iw = WEAPON_GUN;
+
 	if(InAir)
 		State.Add(&g_pData->m_aAnimations[ANIM_INAIR], 0, 1.0f); // TODO: some sort of time here
 	else if(Stationary)
@@ -252,9 +258,9 @@ void CPlayers::RenderPlayer(
 	else if(!WantOtherDir)
 		State.Add(&g_pData->m_aAnimations[ANIM_WALK], WalkTime, 1.0f);
 
-	if(Player.m_Weapon == WEAPON_HAMMER)
+	if(iw == WEAPON_HAMMER)
 		State.Add(&g_pData->m_aAnimations[ANIM_HAMMER_SWING], clamp(LastAttackTime * 5.0f, 0.0f, 1.0f), 1.0f);
-	if(Player.m_Weapon == WEAPON_NINJA)
+	if(iw == WEAPON_NINJA)
 		State.Add(&g_pData->m_aAnimations[ANIM_NINJA_SWING], clamp(LastAttackTime * 2.0f, 0.0f, 1.0f), 1.0f);
 
 	// do skidding
@@ -362,7 +368,6 @@ void CPlayers::RenderPlayer(
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.5f);
 
 		// normal weapons
-		int iw = clamp(Player.m_Weapon, 0, NUM_WEAPONS - 1);
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpriteWeapons[iw]);
 		int QuadOffset = iw * 2 + (Direction.x < 0 ? 1 : 0);
 
@@ -371,7 +376,7 @@ void CPlayers::RenderPlayer(
 		vec2 Dir = Direction;
 		float Recoil = 0.0f;
 		vec2 p;
-		if(Player.m_Weapon == WEAPON_HAMMER)
+		if(iw == WEAPON_HAMMER)
 		{
 			// Static position for hammer
 			p = Position + vec2(State.GetAttach()->m_X, State.GetAttach()->m_Y);
@@ -388,7 +393,7 @@ void CPlayers::RenderPlayer(
 			}
 			Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, p.x, p.y);
 		}
-		else if(Player.m_Weapon == WEAPON_NINJA)
+		else if(iw == WEAPON_NINJA)
 		{
 			p = Position;
 			p.y += g_pData->m_Weapons.m_aId[iw].m_Offsety;
@@ -463,12 +468,12 @@ void CPlayers::RenderPlayer(
 				Recoil = sinf(a * pi);
 			p = Position + Dir * g_pData->m_Weapons.m_aId[iw].m_Offsetx - Dir * Recoil * 10.0f;
 			p.y += g_pData->m_Weapons.m_aId[iw].m_Offsety;
-			if(Player.m_Weapon == WEAPON_GUN && g_Config.m_ClOldGunPosition)
+			if(iw == WEAPON_GUN && g_Config.m_ClOldGunPosition)
 				p.y -= 8;
 			Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, p.x, p.y);
 		}
 
-		if(Player.m_Weapon == WEAPON_GUN || Player.m_Weapon == WEAPON_SHOTGUN)
+		if(iw == WEAPON_GUN || iw == WEAPON_SHOTGUN)
 		{
 			// check if we're firing stuff
 			if(g_pData->m_Weapons.m_aId[iw].m_NumSpriteMuzzles) //prev.attackticks)
@@ -514,7 +519,7 @@ void CPlayers::RenderPlayer(
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		Graphics()->QuadsSetRotation(0);
 
-		switch(Player.m_Weapon)
+		switch(iw)
 		{
 		case WEAPON_GUN: RenderHand(&RenderInfo, p, Direction, -3 * pi / 4, vec2(-15, 4), Alpha); break;
 		case WEAPON_SHOTGUN: RenderHand(&RenderInfo, p, Direction, -pi / 2, vec2(-5, 4), Alpha); break;
