@@ -19,11 +19,6 @@
 
 #include "SDL_hints.h"
 
-#if defined(SDL_VIDEO_DRIVER_X11)
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#endif
-
 #include <engine/shared/config.h>
 
 #include <base/tl/threading.h>
@@ -4339,6 +4334,8 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *Screen, int *pWidt
 			Compiled.major, Compiled.minor, Compiled.patch);
 	}
 
+	SDL_SetHint(SDL_HINT_VIDEO_X11_FORCE_EGL, "1");
+
 	if(!SDL_WasInit(SDL_INIT_VIDEO))
 	{
 		if(SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
@@ -4862,22 +4859,6 @@ void CGraphicsBackend_SDL_OpenGL::NotifyWindow()
 	desc.dwTimeout = 0;
 
 	FlashWindowEx(&desc);
-#elif defined(SDL_VIDEO_DRIVER_X11) && !defined(CONF_PLATFORM_MACOS)
-	Display *dpy = info.info.x11.display;
-	Window win = info.info.x11.window;
-
-	// Old hints
-	XWMHints *wmhints;
-	wmhints = XAllocWMHints();
-	wmhints->flags = XUrgencyHint;
-	XSetWMHints(dpy, win, wmhints);
-	XFree(wmhints);
-
-	// More modern way of notifying
-	static Atom demandsAttention = XInternAtom(dpy, "_NET_WM_STATE_DEMANDS_ATTENTION", true);
-	static Atom wmState = XInternAtom(dpy, "_NET_WM_STATE", true);
-	XChangeProperty(dpy, win, wmState, XA_ATOM, 32, PropModeReplace,
-		(unsigned char *)&demandsAttention, 1);
 #endif
 }
 

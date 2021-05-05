@@ -18,6 +18,10 @@ if(NOT GLEW_FOUND)
   target_include_directories(glew PRIVATE ${GLEW_INCLUDEDIR})
   target_compile_definitions(glew PRIVATE GLEW_STATIC)
 
+  if(TARGET_OS STREQUAL "linux")
+    target_compile_definitions(glew PRIVATE GLEW_EGL)
+  endif()
+
   set(GLEW_DEP $<TARGET_OBJECTS:glew>)
   set(GLEW_INCLUDE_DIRS ${GLEW_INCLUDEDIR})
   set(GLEW_LIBRARIES)
