@@ -583,27 +583,9 @@ void CGraphicsBackend_SDL_OpenGL::ClampDriverVersion(EBackendType BackendType)
 {
 	if(BackendType == BACKEND_TYPE_OPENGL)
 	{
-		//clamp the versions to existing versions(only for OpenGL major <= 3)
-		if(g_Config.m_GfxOpenGLMajor == 1)
-		{
-			g_Config.m_GfxOpenGLMinor = clamp(g_Config.m_GfxOpenGLMinor, 1, 5);
-			if(g_Config.m_GfxOpenGLMinor == 2)
-				g_Config.m_GfxOpenGLPatch = clamp(g_Config.m_GfxOpenGLPatch, 0, 1);
-			else
-				g_Config.m_GfxOpenGLPatch = 0;
-		}
-		else if(g_Config.m_GfxOpenGLMajor == 2)
-		{
-			g_Config.m_GfxOpenGLMinor = clamp(g_Config.m_GfxOpenGLMinor, 0, 1);
-			g_Config.m_GfxOpenGLPatch = 0;
-		}
-		else if(g_Config.m_GfxOpenGLMajor == 3)
-		{
-			g_Config.m_GfxOpenGLMinor = clamp(g_Config.m_GfxOpenGLMinor, 0, 3);
-			if(g_Config.m_GfxOpenGLMinor < 3)
-				g_Config.m_GfxOpenGLMinor = 0;
-			g_Config.m_GfxOpenGLPatch = 0;
-		}
+		g_Config.m_GfxOpenGLMajor = 3;
+		g_Config.m_GfxOpenGLMinor = 3;
+		g_Config.m_GfxOpenGLPatch = 0;
 	}
 	else if(BackendType == BACKEND_TYPE_OPENGL_ES)
 	{
