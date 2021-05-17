@@ -26,6 +26,10 @@
 
 int CMenus::DoButton_DemoPlayer(const void *pID, const char *pText, int Checked, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	RenderTools()->DrawUIRect(pRect, ColorRGBA(1, 1, 1, (Checked ? 0.10f : 0.5f) * ButtonColorMul(pID)), CUI::CORNER_ALL, 5.0f);
 	UI()->DoLabel(pRect, pText, 14.0f, 0);
 	return UI()->DoButtonLogic(pID, pText, Checked, pRect);
@@ -33,6 +37,10 @@ int CMenus::DoButton_DemoPlayer(const void *pID, const char *pText, int Checked,
 
 int CMenus::DoButton_Sprite(const void *pID, int ImageID, int SpriteID, int Checked, const CUIRect *pRect, int Corners)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	RenderTools()->DrawUIRect(pRect, ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.10f : 0.5f) * ButtonColorMul(pID)), Corners, 5.0f);
 	Graphics()->TextureSet(g_pData->m_aImages[ImageID].m_Id);
 	Graphics()->QuadsBegin();
@@ -515,6 +523,10 @@ static bool gs_ListBoxClicked;
 void CMenus::UiDoListboxStart(const void *pID, const CUIRect *pRect, float RowHeight, const char *pTitle, const char *pBottomText, int NumItems,
 	int ItemsPerRow, int SelectedIndex, float ScrollValue, bool LogicOnly)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect Scroll, Row;
 	CUIRect View = *pRect;
 
@@ -610,6 +622,10 @@ CMenus::CListboxItem CMenus::UiDoListboxNextRow()
 
 CMenus::CListboxItem CMenus::UiDoListboxNextItem(const void *pId, bool Selected, bool KeyEvents, bool NoHoverEffects)
 {
+	if((uint64_t)pId > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	int ThisItemIndex = gs_ListBoxItemIndex;
 	if(Selected)
 	{

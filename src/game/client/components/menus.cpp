@@ -123,6 +123,10 @@ CMenus::CMenus()
 
 float CMenus::ButtonColorMul(const void *pID)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	if(UI()->ActiveItem() == pID)
 		return ButtonColorMulActive();
 	else if(UI()->HotItem() == pID)
@@ -162,6 +166,10 @@ int CMenus::DoButton_Icon(int ImageId, int SpriteId, const CUIRect *pRect)
 
 int CMenus::DoButton_Toggle(const void *pID, int Checked, const CUIRect *pRect, bool Active)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_GUIBUTTONS].m_Id);
 	Graphics()->QuadsBegin();
 	if(!Active)
@@ -182,6 +190,10 @@ int CMenus::DoButton_Toggle(const void *pID, int Checked, const CUIRect *pRect, 
 
 int CMenus::DoButton_Menu(const void *pID, const char *pText, int Checked, const CUIRect *pRect, const char *pImageName, int Corners, float r, float FontFactor, vec4 ColorHot, vec4 Color, int AlignVertically, bool CheckForActiveColorPicker)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect Text = *pRect;
 
 	bool MouseInsideColorPicker = false;
@@ -236,6 +248,10 @@ int CMenus::DoButton_Menu(const void *pID, const char *pText, int Checked, const
 
 void CMenus::DoButton_KeySelect(const void *pID, const char *pText, int Checked, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	RenderTools()->DrawUIRect(pRect, ColorRGBA(1, 1, 1, 0.5f * ButtonColorMul(pID)), CUI::CORNER_ALL, 5.0f);
 	CUIRect Temp;
 	pRect->HMargin(1.0f, &Temp);
@@ -244,6 +260,10 @@ void CMenus::DoButton_KeySelect(const void *pID, const char *pText, int Checked,
 
 int CMenus::DoButton_MenuTab(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, int AlignVertically)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	bool MouseInside = UI()->MouseInside(pRect);
 	CUIRect Rect = *pRect;
 
@@ -325,6 +345,10 @@ int CMenus::DoButton_MenuTab(const void *pID, const char *pText, int Checked, co
 
 int CMenus::DoButton_GridHeader(const void *pID, const char *pText, int Checked, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	if(Checked == 2)
 		RenderTools()->DrawUIRect(pRect, ColorRGBA(1, 0.98f, 0.5f, 0.55f), CUI::CORNER_T, 5.0f);
 	else if(Checked)
@@ -337,6 +361,10 @@ int CMenus::DoButton_GridHeader(const void *pID, const char *pText, int Checked,
 
 int CMenus::DoButton_CheckBox_Common(const void *pID, const char *pText, const char *pBoxText, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect c = *pRect;
 	CUIRect t = *pRect;
 	c.w = c.h;
@@ -464,6 +492,10 @@ ColorHSLA CMenus::DoLine_ColorPicker(int *pResetID, const float LineSize, const 
 
 int CMenus::DoButton_CheckBoxAutoVMarginAndSet(const void *pID, const char *pText, int *pValue, CUIRect *pRect, float VMargin)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect CheckBoxRect;
 	pRect->HSplitTop(VMargin, &CheckBoxRect, pRect);
 
@@ -883,6 +915,10 @@ int CMenus::DoClearableEditBox(void *pID, void *pClearID, const CUIRect *pRect, 
 
 float CMenus::DoScrollbarV(const void *pID, const CUIRect *pRect, float Current)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect Handle;
 	static float OffsetY;
 	pRect->HSplitTop(33, &Handle, 0);
@@ -942,6 +978,10 @@ float CMenus::DoScrollbarV(const void *pID, const CUIRect *pRect, float Current)
 
 float CMenus::DoScrollbarH(const void *pID, const CUIRect *pRect, float Current, bool ColorPickerSlider, ColorRGBA *pColorInner)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect Handle;
 	static float OffsetX;
 	pRect->VSplitLeft(ColorPickerSlider ? 8 : 33, &Handle, 0);
@@ -3029,6 +3069,10 @@ bool CMenus::CheckHotKey(int Key) const
 
 int CMenus::DoButton_CheckBox_DontCare(const void *pID, const char *pText, int Checked, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	switch(Checked)
 	{
 	case 0:

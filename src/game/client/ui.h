@@ -247,6 +247,10 @@ public:
 	void SetHotItem(const void *pID) { m_pBecommingHotItem = pID; }
 	void SetActiveItem(const void *pID)
 	{
+		if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+		{
+			dbg_msg("test", "test");
+		}
 		m_pActiveItem = pID;
 		if(pID)
 			m_pLastActiveItem = pID;

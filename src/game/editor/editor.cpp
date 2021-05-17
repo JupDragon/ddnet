@@ -495,6 +495,10 @@ int CEditor::DoEditBox(void *pID, const CUIRect *pRect, char *pStr, unsigned Str
 
 float CEditor::ButtonColorMul(const void *pID)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	if(UI()->ActiveItem() == pID)
 		return 0.5f;
 	else if(UI()->HotItem() == pID)
@@ -504,6 +508,10 @@ float CEditor::ButtonColorMul(const void *pID)
 
 float CEditor::UiDoScrollbarV(const void *pID, const CUIRect *pRect, float Current)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	CUIRect Handle;
 	static float s_OffsetY;
 	pRect->HSplitTop(33, &Handle, 0);
@@ -560,6 +568,10 @@ float CEditor::UiDoScrollbarV(const void *pID, const CUIRect *pRect, float Curre
 
 ColorRGBA CEditor::GetButtonColor(const void *pID, int Checked)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	if(Checked < 0)
 		return ColorRGBA(0, 0, 0, 0.5f);
 
@@ -609,6 +621,10 @@ ColorRGBA CEditor::GetButtonColor(const void *pID, int Checked)
 
 int CEditor::DoButton_Editor_Common(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	if(UI()->MouseInside(pRect))
 	{
 		if(Flags & BUTTON_CONTEXT)
@@ -637,6 +653,10 @@ int CEditor::DoButton_Editor(const void *pID, const char *pText, int Checked, co
 
 int CEditor::DoButton_Env(const void *pID, const char *pText, int Checked, const CUIRect *pRect, const char *pToolTip, ColorRGBA BaseColor)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	float Bright = Checked ? 1.0f : 0.5f;
 	float Alpha = UI()->HotItem() == pID ? 1.0f : 0.75f;
 	ColorRGBA Color = ColorRGBA(BaseColor.r * Bright, BaseColor.g * Bright, BaseColor.b * Bright, Alpha);
@@ -649,6 +669,10 @@ int CEditor::DoButton_Env(const void *pID, const char *pText, int Checked, const
 
 int CEditor::DoButton_File(const void *pID, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	if(Checked)
 		RenderTools()->DrawUIRect(pRect, GetButtonColor(pID, Checked), CUI::CORNER_ALL, 3.0f);
 

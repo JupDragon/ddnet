@@ -346,11 +346,19 @@ void CUIRect::HMargin(float Cut, CUIRect *pOtherRect) const
 
 int CUI::DoButtonLogic(const void *pID, const char *pText, int Checked, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	return DoButtonLogic(pID, Checked, pRect);
 }
 
 int CUI::DoButtonLogic(const void *pID, int Checked, const CUIRect *pRect)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	// logic
 	int ReturnValue = 0;
 	int Inside = MouseInside(pRect);
@@ -385,6 +393,10 @@ int CUI::DoButtonLogic(const void *pID, int Checked, const CUIRect *pRect)
 
 int CUI::DoPickerLogic(const void *pID, const CUIRect *pRect, float *pX, float *pY)
 {
+	if((uint64_t)pID > (uint64_t)0x7fffffff0000)
+	{
+		dbg_msg("test", "test");
+	}
 	int Inside = MouseInside(pRect);
 
 	if(Inside)
