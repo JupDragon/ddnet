@@ -1,28 +1,8 @@
 if(NOT PREFER_BUNDLED_LIBS)
-  if(NOT CMAKE_CROSSCOMPILING)
-    find_package(PkgConfig QUIET)
-    pkg_check_modules(PC_PNG PNG)
-  endif()
-
-  find_library(PNG_LIBRARY
-    NAMES png16
-    HINTS ${HINTS_PNG_LIBDIR} ${PC_PNG_LIBDIR} ${PC_PNG_LIBRARY_DIRS}
-    ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
-  )
-  find_path(PNG_INCLUDEDIR
-    NAMES png.h
-    HINTS ${HINTS_PNG_INCLUDEDIR} ${PC_PNG_INCLUDEDIR} ${PC_PNG_INCLUDE_DIRS}
-    ${CROSSCOMPILING_NO_CMAKE_SYSTEM_PATH}
-  )
-
-  mark_as_advanced(PNG_LIBRARY PNG_INCLUDEDIR)
-
-  if(PNG_LIBRARY AND PNG_INCLUDEDIR)
-    include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(PNG DEFAULT_MSG PNG_LIBRARY PNG_INCLUDEDIR)
-
-    set(PNG_LIBRARIES ${PNG_LIBRARY})
-    set(PNG_INCLUDE_DIRS ${PNG_INCLUDEDIR})
+  set(CMAKE_MODULE_PATH ${ORIGINAL_CMAKE_MODULE_PATH})
+  find_package(PNG)
+  set(CMAKE_MODULE_PATH ${OWN_CMAKE_MODULE_PATH})
+  if(PNG_FOUND)
     set(PNG_BUNDLED OFF)
     set(PNG_DEP)
   endif()
