@@ -789,8 +789,6 @@ inline void clampf(float &Value, float Min, float Max)
 
 void CGraphics_Threaded::SetColorVertex(const CColorVertex *pArray, int Num)
 {
-	dbg_assert(m_Drawing != 0, "called Graphics()->SetColorVertex without begin");
-
 	for(int i = 0; i < Num; ++i)
 	{
 		float r = pArray[i].m_R, g = pArray[i].m_G, b = pArray[i].m_B, a = pArray[i].m_A;
@@ -832,7 +830,6 @@ void CGraphics_Threaded::SetColor(ColorRGBA rgb)
 
 void CGraphics_Threaded::SetColor4(vec4 TopLeft, vec4 TopRight, vec4 BottomLeft, vec4 BottomRight)
 {
-	dbg_assert(m_Drawing != 0, "called Graphics()->SetColor without begin");
 	CColorVertex Array[4] = {
 		CColorVertex(0, TopLeft.r, TopLeft.g, TopLeft.b, TopLeft.a),
 		CColorVertex(1, TopRight.r, TopRight.g, TopRight.b, TopRight.a),
@@ -1249,13 +1246,13 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 	}
 }
 
-int CGraphics_Threaded::CreateQuadContainer()
+int CGraphics_Threaded::CreateQuadContainer(bool AutomaticUpload)
 {
 	int Index = -1;
 	if(m_FirstFreeQuadContainer == -1)
 	{
 		Index = m_QuadContainers.size();
-		m_QuadContainers.push_back(SQuadContainer());
+		m_QuadContainers.push_back(SQuadContainer(AutomaticUpload));
 	}
 	else
 	{
@@ -1265,6 +1262,12 @@ int CGraphics_Threaded::CreateQuadContainer()
 	}
 
 	return Index;
+}
+
+void CGraphics_Threaded::QuadContainerChangeAutomaticUpload(int ContainerIndex, bool AutomaticUpload)
+{
+	SQuadContainer &Container = m_QuadContainers[ContainerIndex];
+	Container.m_AutomicUpload = AutomaticUpload;
 }
 
 void CGraphics_Threaded::QuadContainerUpload(int ContainerIndex)
@@ -1363,7 +1366,8 @@ void CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CQuadItem *pA
 		}
 	}
 
-	QuadContainerUpload(ContainerIndex);
+	if(Container.m_AutomicUpload)
+		QuadContainerUpload(ContainerIndex);
 }
 
 void CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem *pArray, int Num)
@@ -1399,7 +1403,8 @@ void CGraphics_Threaded::QuadContainerAddQuads(int ContainerIndex, CFreeformItem
 		SetColor(&Quad.m_aVertices[3], 2);
 	}
 
-	QuadContainerUpload(ContainerIndex);
+	if(Container.m_AutomicUpload)
+		QuadContainerUpload(ContainerIndex);
 }
 
 void CGraphics_Threaded::QuadContainerReset(int ContainerIndex)
@@ -1428,7 +1433,7 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadDrawNum
 	RenderQuadContainer(ContainerIndex, 0, QuadDrawNum);
 }
 
-void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset, int QuadDrawNum)
+void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset, int QuadDrawNum, bool ChangeWrapMode)
 {
 	SQuadContainer &Container = m_QuadContainers[ContainerIndex];
 
@@ -1443,7 +1448,8 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 		if(Container.m_QuadBufferContainerIndex == -1)
 			return;
 
-		WrapClamp();
+		if(ChangeWrapMode)
+			WrapClamp();
 
 		CCommandBuffer::SCommand_RenderQuadContainer Cmd;
 		Cmd.m_State = m_State;
@@ -1479,7 +1485,8 @@ void CGraphics_Threaded::RenderQuadContainer(int ContainerIndex, int QuadOffset,
 			m_NumVertices += 4 * QuadDrawNum;
 		}
 		m_Drawing = DRAWING_QUADS;
-		WrapClamp();
+		if(ChangeWrapMode)
+			WrapClamp();
 		FlushVertices(false);
 		m_Drawing = 0;
 	}
