@@ -129,6 +129,8 @@ public:
 	void CountryFilterClean(int Network);
 	void TypeFilterClean(int Network);
 
+	void ReseedToken();
+
 	//
 	void Update(bool ForceResort);
 	void Set(const NETADDR &Addr, int Type, int Token, const CServerInfo *pInfo);

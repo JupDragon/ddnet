@@ -2824,7 +2824,9 @@ void CClient::Update()
 				m_CurrentServerPingUuid = RandomUuid();
 				if(!m_ServerCapabilities.m_PingEx)
 				{
+					m_ServerBrowser.ReseedToken();
 					m_ServerBrowser.RequestCurrentServer(m_ServerAddress, &m_CurrentServerPingBasicToken, &m_CurrentServerPingToken);
+					m_ServerBrowser.ReseedToken();
 				}
 				else
 				{

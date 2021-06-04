@@ -822,6 +822,11 @@ void CServerBrowser::Refresh(int Type)
 	}
 }
 
+void CServerBrowser::ReseedToken()
+{
+	secure_random_fill(m_aTokenSeed, sizeof(m_aTokenSeed));
+}
+
 void CServerBrowser::RequestImpl(const NETADDR &Addr, CServerEntry *pEntry, int *pBasicToken, int *pToken) const
 {
 	unsigned char Buffer[sizeof(SERVERBROWSE_GETINFO) + 1];
