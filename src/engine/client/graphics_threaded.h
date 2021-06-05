@@ -1143,6 +1143,7 @@ public:
 	int GetNumScreens() const override;
 	void Minimize() override;
 	void Maximize() override;
+	void UpdateViewport(int X, int Y, int W, int H) override;
 	void SetWindowParams(int FullscreenMode, bool IsBorderless) override;
 	bool SetWindowScreen(int Index) override;
 	void Resize(int w, int h, bool SetWindowSize = false) override;

@@ -2313,6 +2313,21 @@ bool CGraphics_Threaded::SetWindowScreen(int Index)
 	return m_pBackend->SetWindowScreen(Index);
 }
 
+void CGraphics_Threaded::UpdateViewport(int X, int Y, int W, int H)
+{
+	CCommandBuffer::SCommand_Update_Viewport Cmd;
+	Cmd.m_X = X;
+	Cmd.m_Y = Y;
+	Cmd.m_Width = W;
+	Cmd.m_Height = H;
+
+	if(!AddCmd(
+		   Cmd, [] { return true; }, "failed to add resize command"))
+	{
+		return;
+	}
+}
+
 void CGraphics_Threaded::Resize(int w, int h, bool SetWindowSize)
 {
 #if defined(CONF_VIDEORECORDER)
