@@ -1755,7 +1755,7 @@ void CMapLayers::OnRender()
 					{
 						ColorRGBA Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f);
 						if(IsGameLayer && EntityOverlayVal)
-							Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * EntityOverlayVal / 100.0f);
+							Color = ColorRGBA(1.0f, 1.0f, 1.0f, EntityOverlayVal / 100.0f);
 						else if(!IsGameLayer && EntityOverlayVal && !(m_Type == TYPE_BACKGROUND_FORCE))
 							Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * (100 - EntityOverlayVal) / 100.0f);
 						if(!Graphics()->IsTileBufferingEnabled())
@@ -1851,7 +1851,7 @@ void CMapLayers::OnRender()
 
 				if(Size >= (size_t)pTMap->m_Width * pTMap->m_Height * sizeof(CTile))
 				{
-					ColorRGBA Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * EntityOverlayVal / 100.0f);
+					ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, EntityOverlayVal / 100.0f);
 					if(!Graphics()->IsTileBufferingEnabled())
 					{
 						Graphics()->BlendNone();
@@ -1878,7 +1878,7 @@ void CMapLayers::OnRender()
 
 				if(Size >= (size_t)pTMap->m_Width * pTMap->m_Height * sizeof(CSwitchTile))
 				{
-					ColorRGBA Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * EntityOverlayVal / 100.0f);
+					ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, EntityOverlayVal / 100.0f);
 					if(!Graphics()->IsTileBufferingEnabled())
 					{
 						Graphics()->BlendNone();
@@ -1911,7 +1911,7 @@ void CMapLayers::OnRender()
 
 				if(Size >= (size_t)pTMap->m_Width * pTMap->m_Height * sizeof(CTeleTile))
 				{
-					ColorRGBA Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * EntityOverlayVal / 100.0f);
+					ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, EntityOverlayVal / 100.0f);
 					if(!Graphics()->IsTileBufferingEnabled())
 					{
 						Graphics()->BlendNone();
@@ -1942,7 +1942,7 @@ void CMapLayers::OnRender()
 
 				if(Size >= (size_t)pTMap->m_Width * pTMap->m_Height * sizeof(CSpeedupTile))
 				{
-					ColorRGBA Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * EntityOverlayVal / 100.0f);
+					ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, EntityOverlayVal / 100.0f);
 					if(!Graphics()->IsTileBufferingEnabled())
 					{
 						Graphics()->BlendNone();
@@ -1980,7 +1980,7 @@ void CMapLayers::OnRender()
 
 				if(Size >= (size_t)pTMap->m_Width * pTMap->m_Height * sizeof(CTuneTile))
 				{
-					ColorRGBA Color = ColorRGBA(pTMap->m_Color.r / 255.0f, pTMap->m_Color.g / 255.0f, pTMap->m_Color.b / 255.0f, pTMap->m_Color.a / 255.0f * EntityOverlayVal / 100.0f);
+					ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, EntityOverlayVal / 100.0f);
 					if(!Graphics()->IsTileBufferingEnabled())
 					{
 						Graphics()->BlendNone();
