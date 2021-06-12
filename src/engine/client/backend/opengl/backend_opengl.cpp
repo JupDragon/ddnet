@@ -565,6 +565,8 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 
 		glDepthMask(0);
 
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
+
 #ifndef BACKEND_AS_OPENGL_ES
 		if(g_Config.m_DbgGfx)
 		{
@@ -948,7 +950,7 @@ void CCommandProcessorFragment_OpenGL::Cmd_Texture_Create(const CCommandBuffer::
 
 void CCommandProcessorFragment_OpenGL::Cmd_Clear(const CCommandBuffer::SCommand_Clear *pCommand)
 {
-	glClearColor(pCommand->m_Color.r, pCommand->m_Color.g, pCommand->m_Color.b, 0.0f);
+	glClearColor(pCommand->m_Color.r, pCommand->m_Color.g, pCommand->m_Color.b, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 

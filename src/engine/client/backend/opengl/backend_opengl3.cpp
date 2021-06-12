@@ -781,7 +781,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Clear(const CCommandBuffer::SComma
 {
 	if(pCommand->m_Color.r != m_ClearColor.r || pCommand->m_Color.g != m_ClearColor.g || pCommand->m_Color.b != m_ClearColor.b)
 	{
-		glClearColor(pCommand->m_Color.r, pCommand->m_Color.g, pCommand->m_Color.b, 0.0f);
+		glClearColor(pCommand->m_Color.r, pCommand->m_Color.g, pCommand->m_Color.b, 1.0f);
 		m_ClearColor = pCommand->m_Color;
 	}
 	glClear(GL_COLOR_BUFFER_BIT);
