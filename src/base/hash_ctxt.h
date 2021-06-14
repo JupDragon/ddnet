@@ -21,7 +21,7 @@ extern "C" {
 #else
 typedef struct
 {
-	uint64 length;
+	uint64_t length;
 	uint32_t state[8];
 	uint32_t curlen;
 	unsigned char buf[64];

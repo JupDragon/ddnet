@@ -143,7 +143,7 @@ void CChooseMaster::CJob::Run()
 		{
 			continue;
 		}
-		int64 StartTime = time_get();
+		int64_t StartTime = time_get();
 		CGet Get(pUrl, Timeout, false);
 		IEngine::RunJobBlocking(&Get);
 		int Time = (time_get() - StartTime) * 1000 / time_freq();
