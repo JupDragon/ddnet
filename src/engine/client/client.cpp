@@ -2673,6 +2673,7 @@ void CClient::Update()
 			m_PrevGameTick[g_Config.m_ClDummy] = pInfo->m_PreviousTick;
 			m_GameIntraTick[g_Config.m_ClDummy] = pInfo->m_IntraTick;
 			m_GameTickTime[g_Config.m_ClDummy] = pInfo->m_TickTime;
+			m_GameIntraTickSincePrev[g_Config.m_ClDummy] = pInfo->m_IntraTickSincePrev;
 		}
 		else
 		{
@@ -2772,6 +2773,7 @@ void CClient::Update()
 
 				m_GameIntraTick[g_Config.m_ClDummy] = (Now - PrevtickStart) / (float)(CurtickStart - PrevtickStart);
 				m_GameTickTime[g_Config.m_ClDummy] = (Now - PrevtickStart) / (float)Freq; //(float)SERVER_TICK_SPEED);
+				m_GameIntraTickSincePrev[g_Config.m_ClDummy] = (PredNow - PrevtickStart) / (float)(Freq / SERVER_TICK_SPEED);
 
 				CurtickStart = NewPredTick * time_freq() / 50;
 				PrevtickStart = PrevPredTick * time_freq() / 50;

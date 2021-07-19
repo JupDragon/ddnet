@@ -75,6 +75,7 @@ public:
 		int m_PreviousTick;
 
 		float m_IntraTick;
+		float m_IntraTickSincePrev;
 		float m_TickTime;
 	};
 
