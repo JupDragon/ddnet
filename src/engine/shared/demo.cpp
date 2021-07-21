@@ -975,12 +975,49 @@ void CDemoPlayer::SetSpeedIndex(int Offset)
 	SetSpeed(g_aSpeeds[m_SpeedIndex]);
 }
 
-int CDemoPlayer::Update(bool RealTime)
+void CDemoPlayer::PrepareUpdate()
 {
+	if(!IsPlaying())
+		return;
+
 	int64_t Now = time();
 	int64_t Deltatime = Now - m_Info.m_LastUpdate;
 	m_Info.m_LastUpdate = Now;
+	if(!m_Info.m_Info.m_Paused)
+	{
+		m_Info.m_CurrentTime += (int64_t)(Deltatime * (double)m_Info.m_Info.m_Speed);
+	}
+}
 
+bool CDemoPlayer::DoTicks()
+{
+	if(!IsPlaying())
+		return false;
+
+	if(!m_Info.m_Info.m_Paused)
+	{
+		int64_t Freq = time_freq();
+
+		int64_t CurtickStart = (m_Info.m_NextTick) * Freq / SERVER_TICK_SPEED;
+
+		// return if we are ready
+		if(CurtickStart > m_Info.m_CurrentTime)
+			return false;
+
+		// do one more tick
+		DoTick();
+
+		if(m_Info.m_Info.m_Paused)
+			return false;
+
+		return true;
+	}
+
+	return false;
+}
+
+int CDemoPlayer::Update()
+{
 	if(!IsPlaying())
 		return 0;
 
@@ -989,33 +1026,6 @@ int CDemoPlayer::Update(bool RealTime)
 	}
 	else
 	{
-		int64_t Freq = time_freq();
-		m_Info.m_CurrentTime += (int64_t)(Deltatime * (double)m_Info.m_Info.m_Speed);
-
-		while(1)
-		{
-			int64_t CurtickStart = (m_Info.m_NextTick) * Freq / SERVER_TICK_SPEED;
-
-			// break if we are ready
-			if(RealTime && CurtickStart > m_Info.m_CurrentTime)
-				break;
-
-			// do one more tick
-			DoTick();
-
-			if(m_Info.m_Info.m_Paused)
-				return 0;
-		}
-
-		// update intratick
-		{
-			int64_t CurtickStart = (m_Info.m_Info.m_CurrentTick) * Freq / SERVER_TICK_SPEED;
-			int64_t PrevtickStart = (m_Info.m_PreviousTick) * Freq / SERVER_TICK_SPEED;
-			m_Info.m_IntraTick = (m_Info.m_CurrentTime - PrevtickStart) / (float)(CurtickStart - PrevtickStart);
-			m_Info.m_IntraTickSincePrev = (m_Info.m_CurrentTime - PrevtickStart) / (float)(Freq / SERVER_TICK_SPEED);
-			m_Info.m_TickTime = (m_Info.m_CurrentTime - PrevtickStart) / (float)Freq;
-		}
-
 		if(m_Info.m_Info.m_CurrentTick == m_Info.m_PreviousTick ||
 			m_Info.m_Info.m_CurrentTick == m_Info.m_NextTick)
 		{
@@ -1163,7 +1173,7 @@ void CDemoEditor::Slice(const char *pDemo, const char *pDst, int StartTick, int 
 
 	while(m_pDemoPlayer->IsPlaying() && !m_Stop)
 	{
-		m_pDemoPlayer->Update(false);
+		m_pDemoPlayer->Update();
 
 		if(pInfo->m_Info.m_Paused)
 			break;

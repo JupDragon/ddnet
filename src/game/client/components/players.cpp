@@ -602,10 +602,10 @@ void CPlayers::RenderPlayer(
 		Graphics()->QuadsSetRotation(0);
 	}
 
-	if(g_Config.m_ClShowEmotes && !m_pClient->m_aClients[ClientID].m_EmoticonIgnore && m_pClient->m_aClients[ClientID].m_EmoticonStart != -1 && m_pClient->m_aClients[ClientID].m_EmoticonStart <= Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy) && m_pClient->m_aClients[ClientID].m_EmoticonStart + 2 * Client()->GameTickSpeed() > (Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy)))
+	if(g_Config.m_ClShowEmotes && !m_pClient->m_aClients[ClientID].m_EmoticonIgnore && m_pClient->m_aClients[ClientID].m_EmoticonStart != -1 && m_pClient->m_aClients[ClientID].m_EmoticonStart <= (double)Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy) && m_pClient->m_aClients[ClientID].m_EmoticonStart + 2 * Client()->GameTickSpeed() > ((double)Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy)))
 	{
-		float SinceStart = (Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy)) - m_pClient->m_aClients[ClientID].m_EmoticonStart;
-		float FromEnd = m_pClient->m_aClients[ClientID].m_EmoticonStart + 2 * Client()->GameTickSpeed() - (Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy));
+		float SinceStart = (float)((double)Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy)) - m_pClient->m_aClients[ClientID].m_EmoticonStart;
+		float FromEnd = m_pClient->m_aClients[ClientID].m_EmoticonStart + 2 * Client()->GameTickSpeed() - ((double)Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy));
 
 		float a = 1;
 
@@ -614,7 +614,7 @@ void CPlayers::RenderPlayer(
 
 		float h = 1;
 		if(SinceStart < Client()->GameTickSpeed() / 10)
-			h = SinceStart / (Client()->GameTickSpeed() / 10.0f);
+			h = clamp(SinceStart / (Client()->GameTickSpeed() / 10.0f), 0.1f, 1.0f);
 
 		float Wiggle = 0;
 		if(SinceStart < Client()->GameTickSpeed() / 5)
@@ -632,12 +632,6 @@ void CPlayers::RenderPlayer(
 
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		Graphics()->QuadsSetRotation(0);
-	}
-	else
-	{
-		float SinceStart = (Client()->GameTick(g_Config.m_ClDummy) + Client()->IntraGameTickSincePrev(g_Config.m_ClDummy)) - m_pClient->m_aClients[ClientID].m_EmoticonStart;
-		if(SinceStart < 0)
-			dbg_msg("test", "test %f", SinceStart);
 	}
 }
 

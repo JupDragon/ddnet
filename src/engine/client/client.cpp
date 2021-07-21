@@ -2663,9 +2663,9 @@ void CClient::Update()
 			Disconnect();
 #endif
 
-		m_DemoPlayer.Update();
+		m_DemoPlayer.PrepareUpdate();
 
-		if(m_DemoPlayer.IsPlaying())
+		while(m_DemoPlayer.DoTicks())
 		{
 			// update timers
 			const CDemoPlayer::CPlaybackInfo *pInfo = m_DemoPlayer.Info();
@@ -2675,7 +2675,10 @@ void CClient::Update()
 			m_GameTickTime[g_Config.m_ClDummy] = pInfo->m_TickTime;
 			m_GameIntraTickSincePrev[g_Config.m_ClDummy] = pInfo->m_IntraTickSincePrev;
 		}
-		else
+
+		m_DemoPlayer.Update();
+
+		if(!m_DemoPlayer.IsPlaying())
 		{
 			// disconnect on error
 			Disconnect();
@@ -2773,7 +2776,7 @@ void CClient::Update()
 
 				m_GameIntraTick[g_Config.m_ClDummy] = (Now - PrevtickStart) / (float)(CurtickStart - PrevtickStart);
 				m_GameTickTime[g_Config.m_ClDummy] = (Now - PrevtickStart) / (float)Freq; //(float)SERVER_TICK_SPEED);
-				m_GameIntraTickSincePrev[g_Config.m_ClDummy] = (PredNow - PrevtickStart) / (float)(Freq / SERVER_TICK_SPEED);
+				m_GameIntraTickSincePrev[g_Config.m_ClDummy] = (Now - PrevtickStart) / (float)(Freq / SERVER_TICK_SPEED);
 
 				CurtickStart = NewPredTick * time_freq() / 50;
 				PrevtickStart = PrevPredTick * time_freq() / 50;

@@ -141,7 +141,9 @@ public:
 	const char *GetDemoFileName() { return m_aFilename; };
 	int GetDemoType() const;
 
-	int Update(bool RealTime = true);
+	void PrepareUpdate();
+	bool DoTicks();
+	int Update();
 
 	const CPlaybackInfo *Info() const { return &m_Info; }
 	virtual bool IsPlaying() const { return m_File != 0; }
