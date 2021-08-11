@@ -25,6 +25,47 @@ class CGLSLSpriteMultipleProgram;
 #define BACKEND_GL_MODERN_API 1
 #endif
 
+#ifndef HandleOpenGLErrorDbg
+#if defined(CONF_DEBUG) && !defined(BACKEND_AS_OPENGL_ES)
+#define HandleOpenGLErrorDbg \
+	{ \
+		GLenum ErrorCode; \
+		if((ErrorCode = glGetError()) != GL_NO_ERROR) \
+		{ \
+			dbg_msg("gfx", "Got error code: %u at %s: line %u", (unsigned int)ErrorCode, (const char *)__func__, (unsigned int)__LINE__); \
+			dbg_msg("gfx", "With error message: %s", glewGetErrorString(ErrorCode)); \
+			if(m_HasShaders) \
+			{ \
+				GLint ProgramIDCheck_ = 0; \
+				glGetIntegerv(GL_CURRENT_PROGRAM, &ProgramIDCheck_); \
+				if(ProgramIDCheck_ != 0) \
+				{ \
+					glValidateProgram(ProgramIDCheck_); \
+					int ValidateStatus; \
+					glGetProgramiv(ProgramIDCheck_, GL_VALIDATE_STATUS, &ValidateStatus); \
+					if(ValidateStatus != GL_TRUE) \
+					{ \
+						char aInfoLog[1024]; \
+						int iLogLength; \
+						glGetProgramInfoLog(ProgramIDCheck_, 1024, &iLogLength, aInfoLog); \
+						dbg_msg("GLSL Program", "Error! Shader program wasn't validated and returned:"); \
+						dbg_msg("GLSL Program", "%s", aInfoLog); \
+					} \
+				} \
+			} \
+		} \
+	}
+#else
+#define HandleOpenGLErrorDbg
+#endif
+#endif
+
+#define CallGL(name) \
+	{ \
+		gl##name; \
+		HandleOpenGLErrorDbg \
+	}
+
 // takes care of opengl related rendering
 class CCommandProcessorFragment_OpenGL : public CCommandProcessorFragment_OpenGLBase
 {
