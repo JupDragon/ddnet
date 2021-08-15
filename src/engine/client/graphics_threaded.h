@@ -127,6 +127,9 @@ public:
 		CMD_VIDEOMODES,
 		CMD_UPDATE_VIEWPORT,
 
+		// in Android a window that minimizes gets destroyed
+		CMD_WINDOW_CREATE_NTF,
+		CMD_WINDOW_DESTROY_NTF,
 	};
 
 	enum
@@ -575,6 +578,22 @@ public:
 
 		// texture information
 		int m_Slot;
+	};
+
+	struct SCommand_WindowCreateNtf : public CCommandBuffer::SCommand
+	{
+		SCommand_WindowCreateNtf() :
+			SCommand(CMD_WINDOW_CREATE_NTF) {}
+
+		uint32_t m_WindowID;
+	};
+
+	struct SCommand_WindowDestroyNtf : public CCommandBuffer::SCommand
+	{
+		SCommand_WindowDestroyNtf() :
+			SCommand(CMD_WINDOW_DESTROY_NTF) {}
+
+		uint32_t m_WindowID;
 	};
 
 	//
@@ -1148,6 +1167,9 @@ public:
 	void Resize(int w, int h, bool SetWindowSize = false) override;
 	void AddWindowResizeListener(WINDOW_RESIZE_FUNC pFunc, void *pUser) override;
 	int GetWindowScreen() override;
+
+	void WindowDestroyNtf(uint32_t WindowID) override;
+	void WindowCreateNtf(uint32_t WindowID) override;
 
 	int WindowActive() override;
 	int WindowOpen() override;

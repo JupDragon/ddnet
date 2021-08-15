@@ -76,6 +76,10 @@
 #undef main
 #endif
 
+// for android
+#include "SDL_rwops.h"
+#include "base/hash.h"
+
 static const ColorRGBA ClientNetworkPrintColor{0.7f, 1, 0.7f, 1.0f};
 static const ColorRGBA ClientNetworkErrPrintColor{1.0f, 0.25f, 0.25f, 1.0f};
 
@@ -4261,6 +4265,135 @@ void CClient::HandleMapPath(const char *pPath)
 	str_copy(m_aCmdEditMap, pPath, sizeof(m_aCmdEditMap));
 }
 
+#ifdef CONF_PLATFORM_ANDROID
+#include <sys/stat.h>
+#include <unistd.h>
+static void InitAndroid()
+{
+	// change current path to a writable directory
+	const char *pPath = SDL_AndroidGetExternalStoragePath();
+	chdir(pPath);
+	dbg_msg("client", "changed path to %s", pPath);
+
+	// copy integrity files
+	{
+		SDL_RWops *pF = SDL_RWFromFile("integrity.txt", "rb");
+
+		long int length;
+		SDL_RWseek(pF, 0, RW_SEEK_END);
+		length = SDL_RWtell(pF);
+		SDL_RWseek(pF, 0, RW_SEEK_SET);
+
+		char *pAl = (char *)malloc(length);
+		SDL_RWread(pF, pAl, 1, length);
+
+		SDL_RWclose(pF);
+
+		mkdir("data", 0755);
+
+		dbg_msg("integrity", "copying integrity.txt with size: %ld", length);
+
+		IOHANDLE pIO = io_open("integrity.txt", IOFLAG_WRITE);
+		io_write(pIO, pAl, length);
+		io_close(pIO);
+
+		free(pAl);
+	}
+
+	IOHANDLE pIO = io_open("integrity.txt", IOFLAG_READ);
+	CLineReader LineReader;
+	LineReader.Init(pIO);
+	const char *pReadLine = NULL;
+	std::vector<std::string> Lines;
+	while((pReadLine = LineReader.Get()))
+	{
+		Lines.push_back(pReadLine);
+	}
+	io_close(pIO);
+
+	// first line is the whole hash
+	std::string AllAsOne;
+	for(size_t i = 1; i < Lines.size(); ++i)
+	{
+		AllAsOne.append(Lines[i]);
+		AllAsOne.append("\n");
+	}
+	SHA256_DIGEST ShaAll;
+	bool GotSHA = false;
+	{
+		IOHANDLE pIOR = io_open("integrity_save.txt", IOFLAG_READ);
+		if(pIOR != NULL)
+		{
+			CLineReader LineReader;
+			LineReader.Init(pIOR);
+			const char *pLine = LineReader.Get();
+			if(pLine != NULL)
+			{
+				sha256_from_str(&ShaAll, pLine);
+				GotSHA = true;
+			}
+		}
+	}
+
+	SHA256_DIGEST ShaAllFile;
+	sha256_from_str(&ShaAllFile, Lines[0].c_str());
+
+	// TODO: check files individually
+	if(!GotSHA || sha256_comp(ShaAllFile, ShaAll) != 0)
+	{
+		// then the files
+		for(size_t i = 1; i < Lines.size(); ++i)
+		{
+			std::string FileName, Hash;
+			std::string::size_type n = 0;
+			std::string::size_type c = 0;
+			while((c = Lines[i].find(' ', n)) != std::string::npos)
+				n = c + 1;
+			FileName = Lines[i].substr(0, n - 1);
+			Hash = Lines[i].substr(n + 1);
+			SDL_RWops *pF = SDL_RWFromFile(FileName.c_str(), "rb");
+
+			dbg_msg("Integrity", "Copying from assets: %s", FileName.c_str());
+
+			std::string FileNamePath = FileName;
+			std::string FileNamePathSub;
+			c = 0;
+			while((c = FileNamePath.find('/', c)) != std::string::npos)
+			{
+				FileNamePathSub = FileNamePath.substr(0, c);
+				fs_makedir(FileNamePathSub.c_str());
+				++c;
+			}
+
+			long int length;
+			SDL_RWseek(pF, 0, RW_SEEK_END);
+			length = SDL_RWtell(pF);
+			SDL_RWseek(pF, 0, RW_SEEK_SET);
+
+			char *pAl = (char *)malloc(length);
+			SDL_RWread(pF, pAl, 1, length);
+
+			SDL_RWclose(pF);
+
+			IOHANDLE pIO = io_open(FileName.c_str(), IOFLAG_WRITE);
+			io_write(pIO, pAl, length);
+			io_close(pIO);
+
+			free(pAl);
+		}
+
+		IOHANDLE pIOR = io_open("integrity_save.txt", IOFLAG_WRITE);
+		if(pIOR != NULL)
+		{
+			char aFileSHA[SHA256_MAXSTRSIZE];
+			sha256_str(ShaAllFile, aFileSHA, SHA256_MAXSTRSIZE - 1);
+			io_write(pIOR, aFileSHA, SHA256_MAXSTRSIZE);
+			io_close(pIOR);
+		}
+	}
+}
+#endif
+
 /*
 	Server Time
 	Client Mirror Time
@@ -4275,6 +4408,9 @@ void CClient::HandleMapPath(const char *pPath)
 
 #if defined(CONF_PLATFORM_MACOS)
 extern "C" int TWMain(int argc, const char **argv) // ignore_convention
+#elif defined(CONF_PLATFORM_ANDROID)
+extern "C" __attribute__((visibility("default"))) int SDL_main(int argc, char *argv[]);
+int SDL_main(int argc, char *argv[])
 #else
 int main(int argc, const char **argv) // ignore_convention
 #endif
@@ -4296,6 +4432,10 @@ int main(int argc, const char **argv) // ignore_convention
 		}
 	}
 
+#if defined(CONF_PLATFORM_ANDROID)
+	InitAndroid();
+#endif
+
 	if(secure_random_init() != 0)
 	{
 		RandInitFailed = true;
@@ -4311,7 +4451,7 @@ int main(int argc, const char **argv) // ignore_convention
 	// create the components
 	IEngine *pEngine = CreateEngine("DDNet", Silent, 2);
 	IConsole *pConsole = CreateConsole(CFGFLAG_CLIENT);
-	IStorage *pStorage = CreateStorage("Teeworlds", IStorage::STORAGETYPE_CLIENT, argc, argv); // ignore_convention
+	IStorage *pStorage = CreateStorage("Teeworlds", IStorage::STORAGETYPE_CLIENT, argc, (const char **)argv); // ignore_convention
 	IConfigManager *pConfigManager = CreateConfigManager();
 	IEngineSound *pEngineSound = CreateEngineSound();
 	IEngineInput *pEngineInput = CreateEngineInput();
@@ -4423,7 +4563,7 @@ int main(int argc, const char **argv) // ignore_convention
 	else if(argc == 2 && str_endswith(argv[1], ".map"))
 		pClient->HandleMapPath(argv[1]);
 	else if(argc > 1) // ignore_convention
-		pConsole->ParseArguments(argc - 1, &argv[1]); // ignore_convention
+		pConsole->ParseArguments(argc - 1, (const char **)&argv[1]); // ignore_convention
 
 	if(pSteam->GetConnectAddress())
 	{
